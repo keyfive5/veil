@@ -1,0 +1,18 @@
+node_modules/
+dist/
+out/
+build/Release/
+*.log
+.DS_Store
+Thumbs.db
+
+# secrets & local state — never commit
+.env
+.env.*
+!.env.example
+veil-settings.json
+veil-history.jsonl
+
+# editor / OS lock & temp files
+~$*
+*.tmp

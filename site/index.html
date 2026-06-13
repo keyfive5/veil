@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veil — the private AI copilot that hides from screen share</title>
+  <meta name="description" content="Veil reads your screen and whispers the answer during calls, interviews, and meetings — invisible to Zoom, Meet, and Teams. 100% local. Bring your own key. No subscription." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- NAV -->
+  <header class="nav">
+    <a class="logo" href="#top"><span class="logo-dot"></span> Veil</a>
+    <nav class="nav-links">
+      <a href="#compare">Compare</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#pricing">Pricing</a>
+      <a class="btn btn-sm" href="#download">Download</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <div class="pill">⬤ Invisible to Zoom · Meet · Teams · OBS</div>
+      <h1>The AI copilot they<br><span class="grad">can't see.</span></h1>
+      <p class="lede">
+        Veil reads your screen and whispers the perfect answer during interviews,
+        sales calls, and meetings — live, in an overlay that's invisible on screen share.
+        Runs <strong>100% on your device</strong>. Bring your own key. No subscription.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-lg" href="#download">Download free →</a>
+        <a class="btn btn-ghost btn-lg" href="#compare">See it vs Cluely</a>
+      </div>
+      <p class="micro">Free forever with your own key · Windows &amp; macOS · Nothing leaves your machine</p>
+    </div>
+
+    <!-- Overlay mock -->
+    <div class="hero-art">
+      <div class="screenshare-label">What they see on screen share ↓</div>
+      <div class="fakecall">
+        <div class="fc-tile">You</div>
+        <div class="fc-tile alt">Interviewer</div>
+        <!-- The overlay floats here but is "invisible" to the call -->
+        <div class="veil-overlay">
+          <div class="vo-bar">
+            <span class="vo-brand"><i></i>Veil</span>
+            <span class="vo-input">Explain a binary search…</span>
+            <span class="vo-btn">⌘↵</span>
+          </div>
+          <div class="vo-modes">
+            <span class="vo-chip on">Interview</span><span class="vo-chip">Sales</span><span class="vo-chip">Code</span>
+            <span class="vo-listen">● Listening</span>
+          </div>
+          <div class="vo-answer">
+            <strong>"Binary search splits a sorted array in half each step — O(log n)."</strong>
+            <ul><li>Compare target to middle element</li><li>Discard the half it can't be in</li><li>Repeat until found</li></ul>
+          </div>
+          <div class="vo-foot">Hidden from screen share ✓</div>
+        </div>
+      </div>
+      <div class="ghost-note">Veil is here — but invisible to the recording.</div>
+    </div>
+  </section>
+
+  <!-- LOGO / TRUST STRIP -->
+  <section class="strip">
+    <span>Built for</span>
+    <b>Job interviews</b><b>Sales calls</b><b>Live meetings</b><b>Customer support</b><b>Exams &amp; study</b><b>Coding</b>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how" id="how">
+    <h2>Three keys. That's the whole product.</h2>
+    <div class="steps">
+      <div class="step"><span class="num">1</span><kbd>Ctrl</kbd> <kbd>Enter</kbd><p>Veil screenshots your screen and reads the exact question, email, or chat in front of you.</p></div>
+      <div class="step"><span class="num">2</span><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>L</kbd><p>Listen mode hears the other person on the call and suggests your reply in real time.</p></div>
+      <div class="step"><span class="num">3</span><kbd>Ctrl</kbd> <kbd>\</kbd><p>Hide it instantly. It never shows up in your screen share — not even a flicker.</p></div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="compare" id="compare">
+    <h2>Veil vs. everyone else</h2>
+    <p class="section-sub">Same magic. None of the subscription, the cloud, or the data breaches.</p>
+    <div class="table-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th class="rowhead"></th>
+            <th class="us">Veil</th>
+            <th>Cluely</th>
+            <th>Final Round AI</th>
+            <th>LockedIn AI</th>
+            <th>Interview Coder</th>
+            <th>Convo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rowhead">Price</td>
+            <td class="us"><b>Free</b> · $8/mo · $99 lifetime</td>
+            <td>$20/mo<br><small>+$150/mo to go invisible</small></td>
+            <td>~$148/mo<br><small>4 sessions</small></td>
+            <td>$54.99/mo</td>
+            <td>$799 lifetime</td>
+            <td>$15–50/mo</td>
+          </tr>
+          <tr>
+            <td class="rowhead">Invisible to screen share</td>
+            <td class="us"><span class="y">✓ Free</span></td>
+            <td><span class="m">$150/mo tier</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="n">✕ notes only</span></td>
+          </tr>
+          <tr>
+            <td class="rowhead">Your data stays on your device</td>
+            <td class="us"><span class="y">✓ 100% local</span></td>
+            <td><span class="n">✕ cloud · breached '25</span></td>
+            <td><span class="n">✕ cloud</span></td>
+            <td><span class="n">✕ cloud</span></td>
+            <td><span class="n">✕ cloud</span></td>
+            <td><span class="y">✓ (Mac)</span></td>
+          </tr>
+          <tr>
+            <td class="rowhead">Windows + macOS</td>
+            <td class="us"><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="n">✕ Mac only</span></td>
+          </tr>
+          <tr>
+            <td class="rowhead">Live call audio → suggested replies</td>
+            <td class="us"><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="y">✓</span></td>
+            <td><span class="n">✕ coding only</span></td>
+            <td><span class="m">notes</span></td>
+          </tr>
+          <tr>
+            <td class="rowhead">Interviews · Sales · Meetings · Study · Code</td>
+            <td class="us"><span class="y">✓ all, one app</span></td>
+            <td><span class="m">most</span></td>
+            <td><span class="n">interviews</span></td>
+            <td><span class="n">interviews</span></td>
+            <td><span class="n">coding only</span></td>
+            <td><span class="n">notes</span></td>
+          </tr>
+          <tr>
+            <td class="rowhead">Works with no subscription</td>
+            <td class="us"><span class="y">✓ BYO key</span></td>
+            <td><span class="n">✕</span></td>
+            <td><span class="n">✕</span></td>
+            <td><span class="n">✕</span></td>
+            <td><span class="m">lifetime only</span></td>
+            <td><span class="n">✕</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cmp-note">Pricing &amp; features from public sources, June 2026. Cluely suffered a 2025 breach exposing 83,000+ users' transcripts &amp; screenshots — the reason local-first matters.</p>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <h2>Why Veil wins</h2>
+    <div class="grid">
+      <div class="card"><div class="ic">🫥</div><h3>Truly invisible — for free</h3><p>OS-level content protection hides Veil from Zoom, Meet, Teams, and screen recording. Cluely locks this behind a $150/mo tier. We don't.</p></div>
+      <div class="card"><div class="ic">🔒</div><h3>100% on your device</h3><p>Your screen, your audio, your API key — none of it touches our servers, because we don't have any. No account. No breach to be part of.</p></div>
+      <div class="card"><div class="ic">🎧</div><h3>Hears the whole call</h3><p>Listen mode captures the other person's audio and suggests your exact reply, live. Toggle it with one hotkey.</p></div>
+      <div class="card"><div class="ic">🎯</div><h3>Six modes, one app</h3><p>Interview, Sales, Meeting, Study, Code, General — each tuned to give the answer that situation needs. Competitors do one thing.</p></div>
+      <div class="card"><div class="ic">🧠</div><h3>Knows your context</h3><p>Paste your resume or product details once. Veil tailors every answer to you — your experience, your pitch, your numbers.</p></div>
+      <div class="card"><div class="ic">💸</div><h3>No subscription trap</h3><p>Bring your own Claude key and use it free forever. Pay once for lifetime, or $8/mo for sync — your call, not a recurring bill.</p></div>
+      <div class="card"><div class="ic">🧵</div><h3>Ask across <em>every</em> conversation</h3><p>Other tools forget each call. Veil remembers. "What did I discuss about pricing last month?" "How many times have I said <em>React</em>?" — answered across your entire history.</p></div>
+      <div class="card"><div class="ic">🎤</div><h3>Mock interviews that feel real</h3><p>A built-in AI interviewer with webcam practice, voice answers, and a brutal-but-fair scorecard. Rehearse out loud before the real thing.</p></div>
+      <div class="card"><div class="ic">⚡</div><h3>Or skip the key entirely</h3><p>Not technical? Use a Veil key — we run the AI for you, zero setup. Want maximum privacy? Bring your own. Same app, your choice.</p></div>
+    </div>
+  </section>
+
+  <!-- PRIVACY -->
+  <section class="privacy" id="privacy">
+    <div class="privacy-inner">
+      <h2>The cloud tools got hacked. You weren't even using them yet.</h2>
+      <p>In 2025, a popular AI overlay leaked <b>83,000+ users'</b> interview transcripts and screenshots — because everything ran through their cloud. Veil runs entirely on your machine. There's no server to breach, no account to leak, no transcript sitting in someone else's database. The only place your data goes is straight from your computer to the AI provider you chose, on your own key.</p>
+      <a class="btn btn-lg" href="#download">Get the private one →</a>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing" id="pricing">
+    <h2>Honest pricing</h2>
+    <p class="section-sub">Because your inference runs on your own key, Veil itself is almost free to run. So we priced it like it.</p>
+    <div class="tiers">
+      <div class="tier">
+        <h3>Free</h3>
+        <div class="price">$0<span>/forever</span></div>
+        <ul>
+          <li>✓ Everything — really</li>
+          <li>✓ Invisible overlay</li>
+          <li>✓ All 6 modes + Listen</li>
+          <li>✓ Bring your own Claude key</li>
+        </ul>
+        <a class="btn btn-block" href="#download">Download</a>
+      </div>
+      <div class="tier featured">
+        <div class="badge">Most popular</div>
+        <h3>Pro</h3>
+        <div class="price">$8<span>/mo</span></div>
+        <ul>
+          <li>✓ Everything in Free</li>
+          <li>✓ Cloud sync of presets &amp; context</li>
+          <li>✓ Optional managed key (no setup)</li>
+          <li>✓ Priority builds</li>
+        </ul>
+        <a class="btn btn-block btn-fill" href="#download">Start Pro</a>
+      </div>
+      <div class="tier">
+        <h3>Lifetime</h3>
+        <div class="price">$99<span>/once</span></div>
+        <ul>
+          <li>✓ All Pro features</li>
+          <li>✓ One payment, forever</li>
+          <li>✓ No subscription, ever</li>
+          <li>✓ Every future update</li>
+        </ul>
+        <a class="btn btn-block" href="#download">Buy lifetime</a>
+      </div>
+    </div>
+
+    <!-- White-label / Agency band -->
+    <div class="enterprise" id="contact">
+      <div class="ent-l">
+        <div class="ent-tag">White-label · Agency · Teams</div>
+        <h3>Veil as your own product.</h3>
+        <p>Deploy Veil across your whole org or rebrand it as your own. Unlimited seats, your logo, managed keys we host and run, priority support, an SLA, and white-glove onboarding. Built for agencies, bootcamps, sales orgs, and recruiting firms that want Veil as infrastructure.</p>
+        <ul class="ent-list">
+          <li>✓ Unlimited seats</li>
+          <li>✓ Your branding</li>
+          <li>✓ We host the keys + AI</li>
+          <li>✓ Priority support + SLA</li>
+        </ul>
+      </div>
+      <div class="ent-r">
+        <div class="ent-price">$9,997<span>/mo</span></div>
+        <a class="btn btn-lg btn-fill" href="mailto:hello@veil.app?subject=Veil%20White-label">Book a call →</a>
+        <p class="micro">One client covers the whole month.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section class="download" id="download">
+    <h2>Try Veil in 60 seconds</h2>
+    <p class="section-sub">Download, paste your key, hit Ctrl+Enter. That's it.</p>
+    <div class="dl-row">
+      <a class="btn btn-lg" href="#">⊞ Download for Windows</a>
+      <a class="btn btn-lg btn-ghost" href="#"> Download for macOS</a>
+    </div>
+    <p class="micro">Need a key? Grab a free one at console.anthropic.com — takes a minute.</p>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq">
+    <h2>Questions</h2>
+    <div class="qa"><h4>Is it really invisible on screen share?</h4><p>Yes. Veil uses the operating system's content-protection flag, the same mechanism that hides DRM video from screenshots. Zoom, Meet, Teams, and OBS capture the screen behind Veil, not Veil itself.</p></div>
+    <div class="qa"><h4>What does "bring your own key" mean?</h4><p>You paste your own Anthropic (Claude) API key. Requests go straight from your machine to Anthropic — never through us. You pay Anthropic pennies per use instead of a fat monthly subscription to a middleman.</p></div>
+    <div class="qa"><h4>Do you see my screen or my calls?</h4><p>No. Veil has no backend. Everything runs locally; your key and settings live in a file on your own computer.</p></div>
+    <div class="qa"><h4>How is Listen mode different from just a screenshot?</h4><p>Listen captures the live call audio (including the other person) and transcribes it on your machine, so Veil can suggest what to say without you typing anything.</p></div>
+    <div class="qa"><h4>Is this allowed?</h4><p>Veil is a productivity tool for live work — sales, meetings, support, learning. Don't use it to break the rules of exams, certifications, or any platform's terms of service.</p></div>
+  </section>
+
+  <footer class="foot">
+    <div class="foot-l"><span class="logo-dot"></span> Veil — the private AI copilot.</div>
+    <div class="foot-r">Runs on your machine. Powered by Claude, on your key.</div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "veil-server",
+  "version": "0.1.0",
+  "description": "Veil managed-key proxy — lets users skip the API key. Holds the real keys server-side, validates license keys, meters usage.",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
