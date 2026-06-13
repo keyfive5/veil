@@ -12,6 +12,9 @@ Thumbs.db
 !.env.example
 veil-settings.json
 veil-history.jsonl
+*.db
+*.db-wal
+*.db-shm
 
 # editor / OS lock & temp files
 ~$*

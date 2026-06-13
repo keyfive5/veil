@@ -24,6 +24,12 @@ contextBridge.exposeInMainWorld('veil', {
   openPractice: () => ipcRenderer.send('practice:open'),
   practiceTurn: (messages, context) => ipcRenderer.invoke('practice:turn', { messages, context }),
 
+  // onboarding (managed / no-key)
+  openExternal: (url) => ipcRenderer.send('open:external', url),
+  signIn: (email) => ipcRenderer.invoke('auth:magic', { email }),
+  activateToken: (token) => ipcRenderer.send('activate:token', token),
+  onActivated: (cb) => ipcRenderer.on('activate:result', (_e, r) => cb(r)),
+
   // window
   hide: () => ipcRenderer.send('window:hide'),
   quit: () => ipcRenderer.send('app:quit'),

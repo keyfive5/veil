@@ -9,14 +9,18 @@ const FILE = path.join(app.getPath('userData'), 'veil-settings.json');
 
 const DEFAULTS = {
   // How the app talks to Claude:
-  //   'byo'     → user pastes their own Anthropic key (private, nothing leaves device)
-  //   'managed' → user pastes a Veil license key; requests go through the proxy server,
-  //               which holds the real key. No API key needed — for non-technical users.
-  keyMode: 'byo',
+  //   'managed' → DEFAULT. No API key. App activates via a magic link after the
+  //               user pays; requests go through our proxy, which holds the real key.
+  //   'byo'     → user pastes their own Anthropic key (private, nothing leaves device).
+  keyMode: 'managed',
   apiKey: '',                     // BYO Anthropic key — never leaves this machine
-  licenseKey: '',                 // Veil license key (managed mode)
-  managedUrl: 'http://localhost:8787', // Veil proxy URL (managed mode); set to your deployed server
-  model: 'claude-opus-4-8',       // configurable (Opus = smartest, Haiku = fastest)
+  licenseKey: '',                 // Veil license (set automatically on activation)
+  plan: '',                       // 'pro' | 'lifetime' | 'enterprise' (set on activation)
+  // CHANGE THIS to your deployed server URL before building for production:
+  managedUrl: 'http://localhost:8787',
+  // Stripe Payment Link the "Start" button opens (set to your live link):
+  checkoutUrl: '',
+  model: 'claude-opus-4-8',       // BYO model choice (managed uses a cost-guarded model)
   mode: 'general',                // general | interview | sales | meeting | study | code
   context: '',                    // user's resume / product notes / cheat-sheet, fed into prompts
   invisible: true,                // setContentProtection — hide from screen share / recording

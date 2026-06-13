@@ -8,6 +8,8 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "better-sqlite3": "^12.10.1",
+    "express": "^4.21.2",
+    "stripe": "^22.2.1"
   }
 }

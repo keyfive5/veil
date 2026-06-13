@@ -17,6 +17,14 @@
   "build": {
     "appId": "com.veil.app",
     "productName": "Veil",
+    "protocols": [
+      {
+        "name": "Veil",
+        "schemes": [
+          "veil"
+        ]
+      }
+    ],
     "files": [
       "src/**/*",
       "renderer/**/*",

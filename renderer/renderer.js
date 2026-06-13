@@ -10,8 +10,9 @@ const els = {
   transcriptPanel: $('transcriptPanel'), transcript: $('transcript'), autoSuggest: $('autoSuggest'), suggestBtn: $('suggestBtn'),
   panel: $('panel'), answer: $('answer'), answerHint: $('answerHint'), copyBtn: $('copyBtn'),
   settings: $('settings'),
+  onboard: $('onboard'), obStart: $('obStart'), obEmail: $('obEmail'), obSignIn: $('obSignIn'), obStatus: $('obStatus'), obByo: $('obByo'),
   keyMode: $('keyMode'), managedFields: $('managedFields'), byoFields: $('byoFields'),
-  licenseKey: $('licenseKey'), managedUrl: $('managedUrl'), getLicense: $('getLicense'),
+  licenseKey: $('licenseKey'), managedUrl: $('managedUrl'), checkoutUrl: $('checkoutUrl'), getLicense: $('getLicense'),
   usageBox: $('usageBox'), usageFill: $('usageFill'), usageText: $('usageText'),
   apiKey: $('apiKey'), model: $('model'), context: $('context'),
   transcriptionProvider: $('transcriptionProvider'), transcriptionKey: $('transcriptionKey'),
@@ -21,6 +22,7 @@ const els = {
 
 let streaming = false, rawAnswer = '', transcriptText = '', listener = null, suggestDebounce = null;
 let masterMode = false;
+let cfg = {};
 
 // ---- Markdown (safe) ------------------------------------------------------
 function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -101,7 +103,7 @@ window.veil.onError((err) => {
     'bad-request': 'The request was rejected: ' + (err.message || ''),
   }[err.code] || ('Something went wrong: ' + (err.message || 'unknown error'));
   setAnswer('**⚠ ' + msg + '**', false);
-  if (err.code === 'no-key') openSettings();
+  if (err.code === 'no-key') { if ((cfg.keyMode || 'managed') === 'managed') showOnboarding(); else openSettings(); }
 });
 
 // ---- Hotkey commands ------------------------------------------------------
@@ -167,6 +169,47 @@ els.listenBtn.addEventListener('click', toggleListen);
 els.suggestBtn.addEventListener('click', suggestFromTranscript);
 els.autoSuggest.addEventListener('change', () => window.veil.setSettings({ autoSuggest: els.autoSuggest.checked }));
 
+// ---- Onboarding (no-key / managed default) --------------------------------
+function showOnboarding() {
+  els.panel.hidden = true; els.settings.hidden = true; els.transcriptPanel.hidden = true;
+  els.onboard.hidden = false;
+}
+function obSay(msg, isErr) { els.obStatus.textContent = msg; els.obStatus.classList.toggle('err', !!isErr); els.obStatus.hidden = !msg; }
+
+els.obStart.addEventListener('click', () => {
+  if (cfg.checkoutUrl) {
+    window.veil.openExternal(cfg.checkoutUrl);
+    obSay('Opening checkout in your browser… after you pay, click the activation link and Veil turns on automatically. You can leave this open.');
+  } else {
+    obSay('Almost there — set your Stripe checkout link in Settings → Advanced (or use your own key below for now).', true);
+  }
+});
+els.obSignIn.addEventListener('click', async () => {
+  const email = (els.obEmail.value || '').trim();
+  if (!email || !email.includes('@')) { obSay('Enter the email you paid with.', true); return; }
+  obSay('Sending your sign-in link…');
+  const r = await window.veil.signIn(email);
+  if (r && r.error) obSay('Could not reach the server. Check your connection.', true);
+  else obSay('Check your email for a link to activate Veil on this device.');
+});
+els.obByo.addEventListener('click', async (e) => {
+  e.preventDefault();
+  cfg = await window.veil.setSettings({ keyMode: 'byo' });
+  els.onboard.hidden = true;
+  applyKeyMode('byo');
+  openSettings();
+});
+window.veil.onActivated((r) => {
+  if (r && r.ok) {
+    els.onboard.hidden = true;
+    showAnswer();
+    setAnswer(`**You're in — ${r.plan || 'Veil'} plan. 🎉**\n\nHit **Ctrl+Enter** to read your screen, or just ask anything above.`, false);
+    els.input.focus();
+  } else {
+    obSay('Activation failed: ' + ((r && r.error) || 'unknown') + '. Try the link again.', true);
+  }
+});
+
 // ---- Settings -------------------------------------------------------------
 function applyKeyMode(km) {
   const managed = km === 'managed';
@@ -177,9 +220,11 @@ function applyKeyMode(km) {
 }
 async function loadSettings() {
   const s = await window.veil.getSettings();
+  cfg = s;
   els.apiKey.value = s.apiKey || '';
   els.licenseKey.value = s.licenseKey || '';
   els.managedUrl.value = s.managedUrl || '';
+  els.checkoutUrl.value = s.checkoutUrl || '';
   els.model.value = s.model || 'claude-opus-4-8';
   els.context.value = s.context || '';
   els.transcriptionProvider.value = s.transcriptionProvider || 'groq';
@@ -190,22 +235,24 @@ async function loadSettings() {
   els.opacity.value = s.opacity ?? 1;
   els.opacityVal.textContent = Math.round((s.opacity ?? 1) * 100) + '%';
   [...els.modes.children].forEach((c) => c.classList.toggle('active', c.dataset.mode === (s.mode || 'general')));
-  applyKeyMode(s.keyMode || 'byo');
-  const hasKey = (s.keyMode === 'managed') ? s.licenseKey : s.apiKey;
-  if (!s.onboarded || !hasKey) openSettings();
+  applyKeyMode(s.keyMode || 'managed');
+  // First run / not yet connected → onboarding (managed) or settings (BYO).
+  const km = s.keyMode || 'managed';
+  if (km === 'managed' && !s.licenseKey) showOnboarding();
+  else if (km === 'byo' && !s.apiKey) openSettings();
 }
 function openSettings() { els.panel.hidden = true; els.settings.hidden = false; }
 
-els.keyMode.addEventListener('click', (e) => {
+els.keyMode.addEventListener('click', async (e) => {
   const btn = e.target.closest('.seg-btn'); if (!btn) return;
   applyKeyMode(btn.dataset.km);
-  window.veil.setSettings({ keyMode: btn.dataset.km });
+  cfg = await window.veil.setSettings({ keyMode: btn.dataset.km });
 });
 els.settingsBtn.addEventListener('click', () => { if (els.settings.hidden) openSettings(); else els.settings.hidden = true; });
 els.settingsDone.addEventListener('click', async () => {
-  await window.veil.setSettings({
+  cfg = await window.veil.setSettings({
     apiKey: els.apiKey.value.trim(), licenseKey: els.licenseKey.value.trim(), managedUrl: els.managedUrl.value.trim(),
-    model: els.model.value, context: els.context.value,
+    checkoutUrl: els.checkoutUrl.value.trim(), model: els.model.value, context: els.context.value,
     transcriptionProvider: els.transcriptionProvider.value, transcriptionKey: els.transcriptionKey.value.trim(),
     onboarded: true,
   });
@@ -218,6 +265,7 @@ if (els.getLicense) els.getLicense.addEventListener('click', (e) => e.preventDef
 els.apiKey.addEventListener('change', () => window.veil.setSettings({ apiKey: els.apiKey.value.trim(), onboarded: true }));
 els.licenseKey.addEventListener('change', () => window.veil.setSettings({ licenseKey: els.licenseKey.value.trim(), onboarded: true }));
 els.managedUrl.addEventListener('change', () => window.veil.setSettings({ managedUrl: els.managedUrl.value.trim() }));
+els.checkoutUrl.addEventListener('change', async () => { cfg = await window.veil.setSettings({ checkoutUrl: els.checkoutUrl.value.trim() }); });
 els.model.addEventListener('change', () => window.veil.setSettings({ model: els.model.value }));
 els.context.addEventListener('change', () => window.veil.setSettings({ context: els.context.value }));
 els.transcriptionProvider.addEventListener('change', () => window.veil.setSettings({ transcriptionProvider: els.transcriptionProvider.value }));

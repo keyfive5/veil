@@ -72,6 +72,20 @@
         <div class="panel-foot"><span class="hint" id="answerHint">Hidden from screen share</span><button class="textbtn" id="copyBtn">Copy</button></div>
       </div>
 
+      <!-- First-run onboarding (managed / no-key) -->
+      <div class="panel onboard" id="onboard" hidden>
+        <div class="ob-head"><span class="ob-dot"></span> Welcome to Veil</div>
+        <p class="ob-sub">The private AI copilot that hides from screen share. No API key, no setup — just go.</p>
+        <button class="ob-btn primary" id="obStart">Get Veil — no setup needed</button>
+        <div class="ob-or"><span>already paid? sign in</span></div>
+        <div class="ob-signin">
+          <input id="obEmail" class="field" type="email" placeholder="you@email.com" autocomplete="email" />
+          <button class="ob-btn" id="obSignIn">Send link</button>
+        </div>
+        <div class="ob-status" id="obStatus" hidden></div>
+        <a class="ob-byo" id="obByo">or use my own API key — free &amp; private →</a>
+      </div>
+
       <!-- Settings -->
       <div class="panel settings" id="settings" hidden>
         <div class="settings-row">
@@ -88,9 +102,11 @@
             <input id="licenseKey" class="field" type="password" placeholder="VEIL-…" />
             <p class="sub">No API key needed — we run the AI for you. <a href="#" id="getLicense">Get a license →</a></p>
           </div>
-          <details class="adv"><summary>Advanced: server URL</summary>
+          <details class="adv"><summary>Advanced</summary>
             <div class="settings-row"><label>Managed server URL</label>
               <input id="managedUrl" class="field" type="text" placeholder="https://your-veil-server" /></div>
+            <div class="settings-row"><label>Checkout link (Stripe Payment Link)</label>
+              <input id="checkoutUrl" class="field" type="text" placeholder="https://buy.stripe.com/…" /></div>
           </details>
           <div class="usage" id="usageBox" hidden><div class="usage-bar"><i id="usageFill"></i></div><span id="usageText"></span></div>
         </div>

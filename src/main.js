@@ -6,6 +6,7 @@ const {
   screen,
   session,
   desktopCapturer,
+  shell,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -34,6 +35,42 @@ function getCreds() {
   const s = store.read();
   if (s.keyMode === 'managed') return { apiKey: s.licenseKey, baseURL: s.managedUrl, settings: s };
   return { apiKey: s.apiKey, baseURL: undefined, settings: s };
+}
+
+// Model selection. BYO users pick freely; managed mode is cost-guarded (we pay
+// the AI bill), so it uses a cheaper model unless the plan unlocks Opus.
+function modelFor(s) {
+  if (s.keyMode === 'managed') return s.plan === 'enterprise' ? 'claude-opus-4-8' : 'claude-sonnet-4-6';
+  return s.model || 'claude-opus-4-8';
+}
+
+// Exchange a magic-link token for a license and switch the app to managed mode.
+async function activateWithToken(token) {
+  const s = store.read();
+  try {
+    const r = await fetch(`${(s.managedUrl || '').replace(/\/$/, '')}/v1/activate`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token }),
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      return send('activate:result', { ok: false, error: e.error || `HTTP ${r.status}` });
+    }
+    const { licenseKey, plan } = await r.json();
+    store.write({ licenseKey, plan, keyMode: 'managed', onboarded: true });
+    send('activate:result', { ok: true, plan });
+    if (win) { if (!visible) toggleVisibility(); win.showInactive(); }
+  } catch (e) {
+    send('activate:result', { ok: false, error: String(e) });
+  }
+}
+
+function handleActivationUrl(url) {
+  if (!url || !url.startsWith('veil://')) return;
+  try {
+    const u = new URL(url);
+    const token = u.searchParams.get('token');
+    if ((u.host === 'activate' || u.pathname.includes('activate')) && token) activateWithToken(token);
+  } catch {}
 }
 
 function createWindow() {
@@ -149,7 +186,7 @@ ipcMain.on('ai:ask', async (_e, { prompt, includeScreenshot }) => {
   send('ai:status', 'thinking');
   let full = '';
   await streamAnswer({
-    apiKey, baseURL, model: settings.model, mode: settings.mode, context: settings.context,
+    apiKey, baseURL, model: modelFor(settings), mode: settings.mode, context: settings.context,
     prompt, imageBase64, history: convo,
     onText: (d) => { full += d; send('ai:chunk', d); },
     onDone: (text) => {
@@ -178,7 +215,7 @@ ipcMain.on('history:ask', async (_e, { question }) => {
   const prompt = `${countLine}USER QUESTION: ${question}\n\n=== THE USER'S FULL VEIL HISTORY (newest first) ===\n${corpus || '(empty — no saved conversations yet)'}`;
   send('ai:status', 'thinking');
   await streamAnswer({
-    apiKey, baseURL, model: settings.model, systemOverride: MASTER_SYSTEM, maxTokens: 1500, prompt,
+    apiKey, baseURL, model: modelFor(settings), systemOverride: MASTER_SYSTEM, maxTokens: 1500, prompt,
     onText: (d) => send('ai:chunk', d),
     onDone: (t) => send('ai:done', t),
     onError: (err) => send('ai:error', err),
@@ -219,7 +256,7 @@ ipcMain.handle('practice:turn', async (_e, { messages, context }) => {
   if (!apiKey) return { error: 'no-key' };
   try {
     const sys = PRACTICE_SYSTEM + (context ? `\n\nROLE / CONTEXT FOR THIS INTERVIEW:\n${context}` : '');
-    const text = await askOnce({ apiKey, baseURL, model: settings.model, system: sys, messages });
+    const text = await askOnce({ apiKey, baseURL, model: modelFor(settings), system: sys, messages });
     const last = messages[messages.length - 1];
     history.append({ mode: 'practice', kind: 'practice', prompt: typeof last?.content === 'string' ? last.content : '', answer: text });
     return { text };
@@ -227,6 +264,19 @@ ipcMain.handle('practice:turn', async (_e, { messages, context }) => {
     const status = err && (err.status || err.statusCode);
     return { error: status === 401 ? 'bad-key' : (err.message || String(err)) };
   }
+});
+
+// Onboarding: open external links (Stripe checkout) + request a magic link.
+ipcMain.on('open:external', (_e, url) => { if (url && /^https?:\/\//i.test(url)) shell.openExternal(url); });
+ipcMain.on('activate:token', (_e, token) => activateWithToken(token)); // manual/testing path
+ipcMain.handle('auth:magic', async (_e, { email }) => {
+  const s = store.read();
+  try {
+    const r = await fetch(`${(s.managedUrl || '').replace(/\/$/, '')}/auth/magic`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }),
+    });
+    return await r.json();
+  } catch (e) { return { error: String(e) }; }
 });
 
 ipcMain.on('window:hide', () => toggleVisibility());
@@ -262,11 +312,26 @@ function setupDisplayMedia() {
 }
 
 // ---- App lifecycle ---------------------------------------------------------
+// Register the veil:// protocol so magic links activate the app.
+if (process.defaultApp) {
+  if (process.argv.length >= 2) app.setAsDefaultProtocolClient('veil', process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient('veil');
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => { if (win) { if (!visible) toggleVisibility(); win.showInactive(); } });
+  // macOS delivers the activation URL here.
+  app.on('open-url', (e, url) => { e.preventDefault(); handleActivationUrl(url); });
+
+  // Windows/Linux: a magic link click re-launches → URL arrives in argv.
+  app.on('second-instance', (_e, argv) => {
+    const url = argv.find((a) => a.startsWith('veil://'));
+    if (url) handleActivationUrl(url);
+    if (win) { if (!visible) toggleVisibility(); win.showInactive(); }
+  });
 
   app.whenReady().then(() => {
     setupDisplayMedia();
@@ -275,6 +340,9 @@ if (!gotLock) {
     if (process.platform === 'darwin' && app.dock) app.dock.hide();
     setTimeout(checkStorage, 4000);
     setInterval(checkStorage, 5 * 60 * 1000);
+    // First-launch-via-protocol (Windows): URL is in argv.
+    const startUrl = process.argv.find((a) => a.startsWith('veil://'));
+    if (startUrl) setTimeout(() => handleActivationUrl(startUrl), 1500);
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });
 
