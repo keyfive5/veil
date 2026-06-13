@@ -26,13 +26,16 @@
       "target": [
         "nsis",
         "portable"
-      ],
-      "artifactName": "Veil-Setup-${version}.${ext}"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Veil-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Veil-Portable-${version}.${ext}"
     },
     "mac": {
       "target": "dmg",
