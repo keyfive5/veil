@@ -93,21 +93,30 @@ Electron main (src/) — invisible window · content protection · hotkeys · sc
 
 ---
 
-## Roadmap to ship
+## Go live — the no-key (managed) tier
+The "download → pay → it just works" flow is built. To switch it on:
+1. **Deploy `server/`** (Railway/Render/Fly) with a **persistent volume** for `veil.db`. Set env from `server/.env.example`: `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`, `APP_PUBLIC_URL`. Note the public URL.
+2. **Stripe:** create products + **Payment Links** for Pro/Lifetime/Enterprise (set `metadata.plan` on each), grab the price IDs, and register the webhook → `https://<server>/stripe/webhook`.
+3. **Point the app at production:** in `src/store.js`, set default `managedUrl` to your server URL and `checkoutUrl` to your Pro Payment Link (or set them in Settings → Advanced before building).
+4. **Rebuild + publish:** `npm run dist:win` → attach the two `.exe`s to a **GitHub Release** (the landing page download buttons already point at `releases/latest`).
+5. **Deploy `site/`** to Netlify.
+
+Flow once live: user installs → clicks **Get Veil — no setup** → pays on Stripe → webhook issues a license + magic link → user clicks it → `veil://` activates the app automatically. No API key, ever.
+
+### Still optional / later
 - Code-sign builds (Windows EV cert, Apple Developer) so SmartScreen/Gatekeeper don't scare users.
-- Deploy `site/` (Netlify) + Stripe/Lemon Squeezy for Pro/Lifetime/Enterprise.
-- Wire license issuance + persistent usage store (Redis/DB) into the server.
-- Auto-updater (electron-updater).
-- Real generated video-avatar interviewer (premium add-on) on top of the current voice practice.
+- Email provider for the magic link (today the server logs it + the `/go` page renders it).
+- Postgres swap (all SQL is behind `server/db.js`) once you outgrow SQLite.
+- Auto-updater (electron-updater); real generated video-avatar interviewer (premium) atop the current voice practice.
 
 ---
 
 ## The business (to $10k/mo)
 
-Because inference runs on the user's own key (or a metered managed key), Veil is nearly free to run — so it's priced like it:
+Two pricing levers, one app:
 
-- **Free** (BYO key) — the growth engine; costs you nothing. Drives TikTok conversion.
-- **Pro $8/mo** — sync, presets, optional managed key (no setup).
+- **Free** (BYO key) — costs you nothing; the TikTok growth engine and the privacy story.
+- **Pro $12/mo** (managed, no key) — the mass-market default. *You* pay the AI bill, so it runs on a cost-guarded model (Sonnet) with a monthly cap; $12 still undercuts Cluely.
 - **Lifetime $99** — kills the subscription objection.
 - **White-label / Agency $9,997/mo** — unlimited seats, your branding, managed keys, SLA. **One client ≈ your whole monthly goal.**
 
