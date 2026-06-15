@@ -17,41 +17,44 @@
         </span>
       </div>
 
-      <!-- Top pill -->
+      <!-- One calm bar: input + ask-screen + a single "more" menu -->
       <div class="bar" id="bar">
         <div class="brand" id="dragHandle" title="Drag to move">
           <span class="dot"></span><span class="name">Veil</span>
         </div>
         <input id="input" class="input" type="text" autocomplete="off" spellcheck="false"
-          placeholder="Ask anything…  (⌘/Ctrl+↵ reads your screen)" />
+          placeholder="Ask anything…" />
         <button class="iconbtn primary" id="askScreen" title="Read my screen (Ctrl+Enter)">
           <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 5h16v11H4z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
-        <button class="iconbtn" id="masterBtn" title="Ask across ALL your chats (Ctrl+Shift+M)">
-          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 4h14v16l-7-3-7 3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="iconbtn" id="settingsBtn" title="Settings">
-          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <button class="iconbtn" id="hideBtn" title="Hide (Ctrl+\)">
-          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <button class="iconbtn" id="moreBtn" title="More" aria-haspopup="true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
         </button>
       </div>
 
-      <!-- Mode chips + Listen + Practice -->
-      <div class="modebar" id="modebar">
-        <div class="modes" id="modes">
-          <button class="chip active" data-mode="general">General</button>
-          <button class="chip" data-mode="interview">Interview</button>
-          <button class="chip" data-mode="sales">Sales</button>
-          <button class="chip" data-mode="meeting">Meeting</button>
-          <button class="chip" data-mode="study">Study</button>
-          <button class="chip" data-mode="code">Code</button>
-        </div>
-        <button class="listenbtn" id="practiceBtn" title="Practice interview">▶ Practice</button>
-        <button class="listenbtn" id="listenBtn" title="Listen to the call (Ctrl+Shift+L)">
-          <span class="lvdot"></span><span id="listenLabel">Listen</span>
-        </button>
+      <!-- Slim strip: mode dropdown on the left, the privacy promise on the right -->
+      <div class="strip" id="strip">
+        <select id="modeSelect" class="modeSelect" title="What are you doing?">
+          <option value="general">General</option>
+          <option value="interview">Interview</option>
+          <option value="sales">Sales</option>
+          <option value="meeting">Meeting</option>
+          <option value="study">Study</option>
+          <option value="code">Code</option>
+        </select>
+        <span class="livepill" id="listenPill" hidden><span class="lvdot"></span>Live</span>
+        <span class="trust" id="trust"><span class="trust-dot"></span><span id="trustText">Hidden from screen share</span></span>
+      </div>
+
+      <!-- The "•••" menu — everything that isn't the core action lives here -->
+      <div class="menu" id="moreMenu" hidden>
+        <button class="menu-item" id="mListen">Listen to the call</button>
+        <button class="menu-item" id="mPractice">Practice interview</button>
+        <button class="menu-item" id="mMaster">Ask across all my chats</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" id="mSettings">Settings</button>
+        <button class="menu-item" id="mHide">Hide</button>
+        <button class="menu-item danger" id="mQuit">Quit Veil</button>
       </div>
 
       <div class="status" id="status" hidden><span class="spinner"></span><span id="statusText">Thinking…</span></div>

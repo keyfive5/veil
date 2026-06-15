@@ -15,6 +15,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* The `hidden` attribute must always win over component display rules
+   (a class like .panel{display:flex} otherwise overrides [hidden]). */
+[hidden] { display: none !important; }
+
 html, body {
   background: transparent;
   color: var(--text);
@@ -354,6 +358,54 @@ kbd {
 .usage-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
 .usage-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); border-radius: 99px; transition: width 0.3s; }
 .usage span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* ---- Slim strip: mode dropdown + trust line ---- */
+.strip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 2px 6px 0;
+}
+.modeSelect {
+  -webkit-app-region: no-drag;
+  appearance: none; -webkit-appearance: none;
+  background: rgba(255,255,255,0.05) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24'><path d='M6 9l6 6 6-6' fill='none' stroke='%239aa0ad' stroke-width='2'/></svg>") no-repeat right 8px center;
+  border: 1px solid var(--stroke);
+  border-radius: 8px; color: var(--text);
+  font-size: 12px; font-weight: 550; font-family: inherit;
+  padding: 5px 24px 5px 10px; cursor: pointer; outline: none;
+}
+.modeSelect:hover { border-color: var(--stroke-strong); }
+.modeSelect option { background: var(--bg-solid); color: var(--text); }
+.livepill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: #fff;
+  background: rgba(255,107,107,0.16); border: 1px solid rgba(255,107,107,0.5);
+  border-radius: 7px; padding: 3px 8px;
+}
+.livepill .lvdot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); animation: pulse 1.4s infinite; }
+.trust {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted); padding-right: 4px;
+}
+.trust-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 7px var(--accent-2); }
+
+/* ---- "•••" menu ---- */
+.menu {
+  position: absolute; top: 56px; right: 12px; z-index: 40;
+  min-width: 196px;
+  background: var(--bg); border: 1px solid var(--stroke-strong);
+  border-radius: 12px; box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px);
+  padding: 5px; animation: rise 0.14s ease;
+}
+.menu-item {
+  -webkit-app-region: no-drag; display: block; width: 100%; text-align: left;
+  background: none; border: none; border-radius: 8px;
+  color: var(--text); font-size: 13px; font-family: inherit;
+  padding: 9px 11px; cursor: pointer; transition: background 0.12s;
+}
+.menu-item:hover { background: rgba(255,255,255,0.08); }
+.menu-item.danger:hover { color: var(--danger); }
+.menu-sep { height: 1px; background: var(--stroke); margin: 5px 4px; }
 
 /* scrollbars */
 ::-webkit-scrollbar { width: 8px; }

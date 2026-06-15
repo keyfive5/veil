@@ -3,9 +3,11 @@
 const $ = (id) => document.getElementById(id);
 const els = {
   storageBar: $('storageBar'), storageMsg: $('storageMsg'), storageUpsell: $('storageUpsell'), storageDismiss: $('storageDismiss'),
-  input: $('input'), askScreen: $('askScreen'), masterBtn: $('masterBtn'),
-  settingsBtn: $('settingsBtn'), hideBtn: $('hideBtn'),
-  modes: $('modes'), listenBtn: $('listenBtn'), listenLabel: $('listenLabel'), practiceBtn: $('practiceBtn'),
+  input: $('input'), askScreen: $('askScreen'),
+  moreBtn: $('moreBtn'), moreMenu: $('moreMenu'),
+  modeSelect: $('modeSelect'), listenPill: $('listenPill'), trustText: $('trustText'),
+  mListen: $('mListen'), mPractice: $('mPractice'), mMaster: $('mMaster'),
+  mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
   status: $('status'), statusText: $('statusText'),
   transcriptPanel: $('transcriptPanel'), transcript: $('transcript'), autoSuggest: $('autoSuggest'), suggestBtn: $('suggestBtn'),
   panel: $('panel'), answer: $('answer'), answerHint: $('answerHint'), copyBtn: $('copyBtn'),
@@ -60,35 +62,38 @@ function startStream() { streaming = true; rawAnswer = ''; showAnswer(); setAnsw
 function ask(includeScreenshot) {
   if (streaming) return;
   const prompt = els.input.value.trim();
-  if (masterMode && prompt) { startStream(); els.answerHint.textContent = 'From all your chats'; window.veil.askHistory(prompt); els.input.value = ''; return; }
+  if (masterMode && prompt) { startStream(); els.answerHint.textContent = 'From all your chats'; window.veil.askHistory(prompt); els.input.value = ''; setMasterMode(false); return; }
   if (!prompt && !includeScreenshot) return;
   startStream(); els.answerHint.textContent = 'Hidden from screen share';
   window.veil.ask(prompt, includeScreenshot); els.input.value = '';
 }
 els.askScreen.addEventListener('click', () => ask(true));
 els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ask(!masterMode && (e.ctrlKey || e.metaKey)); } });
-els.hideBtn.addEventListener('click', () => window.veil.hide());
 els.copyBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(rawAnswer); els.copyBtn.textContent = 'Copied'; setTimeout(() => (els.copyBtn.textContent = 'Copy'), 1200); } catch {} });
 
 // ---- Master chat (all conversations) --------------------------------------
 function setMasterMode(on) {
   masterMode = on;
-  els.masterBtn.classList.toggle('active', on);
-  els.input.placeholder = on ? 'Ask across ALL your chats…  e.g. "how many times did I say \'car\'?"' : 'Ask anything…  (⌘/Ctrl+↵ reads your screen)';
+  els.input.placeholder = on ? 'Ask across ALL your chats… e.g. how many times did I say "car"?' : 'Ask anything…';
   if (on) els.input.focus();
 }
-els.masterBtn.addEventListener('click', () => setMasterMode(!masterMode));
 window.veil.onMasterChat(() => setMasterMode(!masterMode));
 
-// ---- Modes ----------------------------------------------------------------
-els.modes.addEventListener('click', (e) => {
-  const chip = e.target.closest('.chip'); if (!chip) return;
-  [...els.modes.children].forEach((c) => c.classList.toggle('active', c === chip));
-  window.veil.setSettings({ mode: chip.dataset.mode });
-});
+// ---- Mode dropdown --------------------------------------------------------
+els.modeSelect.addEventListener('change', () => window.veil.setSettings({ mode: els.modeSelect.value }));
 
-// ---- Practice -------------------------------------------------------------
-els.practiceBtn.addEventListener('click', () => window.veil.openPractice());
+// ---- "•••" menu (everything that isn't the core action) -------------------
+function closeMenu() { els.moreMenu.hidden = true; }
+els.moreBtn.addEventListener('click', (e) => { e.stopPropagation(); els.moreMenu.hidden = !els.moreMenu.hidden; });
+document.addEventListener('click', (e) => {
+  if (!els.moreMenu.hidden && !els.moreMenu.contains(e.target) && !els.moreBtn.contains(e.target)) closeMenu();
+});
+els.mListen.addEventListener('click', () => { closeMenu(); toggleListen(); });
+els.mPractice.addEventListener('click', () => { closeMenu(); window.veil.openPractice(); });
+els.mMaster.addEventListener('click', () => { closeMenu(); setMasterMode(true); });
+els.mSettings.addEventListener('click', () => { closeMenu(); openSettings(); });
+els.mHide.addEventListener('click', () => { closeMenu(); window.veil.hide(); });
+els.mQuit.addEventListener('click', () => window.veil.quit());
 
 // ---- Streaming events -----------------------------------------------------
 window.veil.onStatus((s) => { showAnswer(); showStatus(s === 'capturing' ? 'Reading screen…' : 'Thinking…'); });
@@ -97,7 +102,7 @@ window.veil.onDone((t) => { streaming = false; hideStatus(); rawAnswer = t || ra
 window.veil.onError((err) => {
   streaming = false; hideStatus(); showAnswer();
   const msg = {
-    'no-key': 'Add your key in Settings to start. Click the ⚙ icon.',
+    'no-key': 'Add your key in Settings (the ••• menu) to start.',
     'bad-key': 'That key was rejected. Check it in Settings.',
     'rate-limit': 'Rate limited. Wait a moment and try again.',
     'bad-request': 'The request was rejected: ' + (err.message || ''),
@@ -152,20 +157,19 @@ function toggleListen() {
     },
     onState: (state, info) => {
       const live = state === 'listening';
-      els.listenBtn.classList.toggle('live', live);
-      els.listenLabel.textContent = live ? 'Listening' : 'Listen';
+      els.listenPill.hidden = !live;
+      els.mListen.textContent = live ? 'Stop listening' : 'Listen to the call';
       els.transcriptPanel.hidden = !live;
       if (state === 'error') {
         showAnswer();
         if (String(info).includes('no-transcription-key')) { setAnswer('**⚠ Add a transcription key in Settings → Live audio (or switch to a Veil key, which includes it).**', false); openSettings(); }
         else setAnswer('**⚠ Listen: ' + (info || 'audio error') + '**', false);
       }
-      if (state === 'stopped') { els.listenBtn.classList.remove('live'); els.listenLabel.textContent = 'Listen'; els.transcriptPanel.hidden = true; }
+      if (state === 'stopped') { els.listenPill.hidden = true; els.mListen.textContent = 'Listen to the call'; els.transcriptPanel.hidden = true; }
     },
   });
   transcriptText = ''; els.transcript.textContent = ''; listener.start();
 }
-els.listenBtn.addEventListener('click', toggleListen);
 els.suggestBtn.addEventListener('click', suggestFromTranscript);
 els.autoSuggest.addEventListener('change', () => window.veil.setSettings({ autoSuggest: els.autoSuggest.checked }));
 
@@ -234,7 +238,8 @@ async function loadSettings() {
   els.clickThrough.checked = !!s.clickThrough;
   els.opacity.value = s.opacity ?? 1;
   els.opacityVal.textContent = Math.round((s.opacity ?? 1) * 100) + '%';
-  [...els.modes.children].forEach((c) => c.classList.toggle('active', c.dataset.mode === (s.mode || 'general')));
+  els.modeSelect.value = s.mode || 'general';
+  els.trustText.textContent = s.invisible ? 'Hidden from screen share' : 'Visible on screen share';
   applyKeyMode(s.keyMode || 'managed');
   // First run / not yet connected → onboarding (managed) or settings (BYO).
   const km = s.keyMode || 'managed';
@@ -248,7 +253,6 @@ els.keyMode.addEventListener('click', async (e) => {
   applyKeyMode(btn.dataset.km);
   cfg = await window.veil.setSettings({ keyMode: btn.dataset.km });
 });
-els.settingsBtn.addEventListener('click', () => { if (els.settings.hidden) openSettings(); else els.settings.hidden = true; });
 els.settingsDone.addEventListener('click', async () => {
   cfg = await window.veil.setSettings({
     apiKey: els.apiKey.value.trim(), licenseKey: els.licenseKey.value.trim(), managedUrl: els.managedUrl.value.trim(),
@@ -259,7 +263,7 @@ els.settingsDone.addEventListener('click', async () => {
   els.settings.hidden = true; els.input.focus();
 });
 els.quitBtn.addEventListener('click', () => window.veil.quit());
-if (els.getLicense) els.getLicense.addEventListener('click', (e) => e.preventDefault());
+if (els.getLicense) els.getLicense.addEventListener('click', (e) => { e.preventDefault(); if (cfg.checkoutUrl) window.veil.openExternal(cfg.checkoutUrl); });
 
 // live-save
 els.apiKey.addEventListener('change', () => window.veil.setSettings({ apiKey: els.apiKey.value.trim(), onboarded: true }));
@@ -270,7 +274,7 @@ els.model.addEventListener('change', () => window.veil.setSettings({ model: els.
 els.context.addEventListener('change', () => window.veil.setSettings({ context: els.context.value }));
 els.transcriptionProvider.addEventListener('change', () => window.veil.setSettings({ transcriptionProvider: els.transcriptionProvider.value }));
 els.transcriptionKey.addEventListener('change', () => window.veil.setSettings({ transcriptionKey: els.transcriptionKey.value.trim() }));
-els.invisible.addEventListener('change', () => window.veil.setSettings({ invisible: els.invisible.checked }));
+els.invisible.addEventListener('change', () => { els.trustText.textContent = els.invisible.checked ? 'Hidden from screen share' : 'Visible on screen share'; window.veil.setSettings({ invisible: els.invisible.checked }); });
 els.clickThrough.addEventListener('change', () => window.veil.setSettings({ clickThrough: els.clickThrough.checked }));
 els.opacity.addEventListener('input', () => { els.opacityVal.textContent = Math.round(els.opacity.value * 100) + '%'; window.veil.setSettings({ opacity: parseFloat(els.opacity.value) }); });
 
