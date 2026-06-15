@@ -60,4 +60,18 @@ async function verifyAndHandle(rawBody, signature) {
   }
 }
 
-module.exports = { enabled, verifyAndHandle, priceToPlan };
+// Provision (idempotently) from a completed Checkout Session id. Lets the
+// post-payment redirect activate the user WITHOUT needing an email provider:
+// Stripe → /success?session_id=… → we mint a token → veil:// opens the app.
+async function provisionFromSessionId(sessionId) {
+  if (!enabled) throw new Error('stripe disabled');
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const paid = session.payment_status === 'paid' || session.status === 'complete';
+  if (!paid) return null;
+  const plan = await planForSession(session);
+  const email = (session.customer_details && session.customer_details.email) || session.customer_email;
+  const { license } = db.createCustomerWithLicense({ email, stripeCustomerId: session.customer, plan });
+  return license;
+}
+
+module.exports = { enabled, verifyAndHandle, provisionFromSessionId, priceToPlan };

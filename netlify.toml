@@ -1,0 +1,6 @@
+# One-click deploy for the Veil landing page (Netlify).
+# In Netlify: Add new site → Import from Git → pick this repo. It reads this file
+# and publishes the static site in /site. No build step needed.
+[build]
+  publish = "site"
+  command = ""

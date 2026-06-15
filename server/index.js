@@ -82,6 +82,22 @@ app.post('/v1/activate', (req, res) => {
   res.json(out); // { licenseKey, plan }
 });
 
+// Post-payment redirect target. Set your Stripe Payment Link's success URL to
+// https://<server>/success?session_id={CHECKOUT_SESSION_ID} — no email needed.
+app.get('/success', async (req, res) => {
+  const sid = String(req.query.session_id || '');
+  if (!sid) return res.status(400).send('Missing session.');
+  try {
+    const license = await stripeLib.provisionFromSessionId(sid);
+    if (!license) return res.status(425).send('Payment is still processing — refresh in a few seconds.');
+    const token = db.newActivationToken(license.key);
+    res.redirect(`/go?token=${token}`);
+  } catch (e) {
+    console.error('[veil] /success error:', e.message);
+    res.status(400).send('Could not verify your payment. Contact support.');
+  }
+});
+
 // Human-facing landing for the magic link (covers email clients that mangle
 // custom-scheme links). Opens the app via veil://.
 app.get('/go', (req, res) => {

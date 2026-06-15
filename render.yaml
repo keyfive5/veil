@@ -1,0 +1,39 @@
+# One-click deploy for the Veil server (Render Blueprint).
+# In Render: New → Blueprint → pick this repo. Render reads this file, creates the
+# service + a persistent disk for the license database, and prompts you for the
+# secret values below (sync:false = "ask me, don't store in git").
+#
+# Plan note: a persistent disk requires the Starter plan (~$7/mo). That disk is
+# what keeps your customers' licenses safe across restarts/deploys — worth it.
+services:
+  - type: web
+    name: veil-server
+    runtime: node
+    rootDir: server
+    plan: starter
+    buildCommand: npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+    disk:
+      name: veil-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /data/veil.db          # lives on the persistent disk
+      - key: APP_PUBLIC_URL
+        sync: false                    # your Render URL, e.g. https://veil-server.onrender.com
+      - key: ANTHROPIC_API_KEY
+        sync: false                    # console.anthropic.com
+      - key: GROQ_API_KEY
+        sync: false                    # console.groq.com (free) — for Listen mode
+      - key: STRIPE_SECRET_KEY
+        sync: false                    # Stripe → Developers → API keys
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false                    # Stripe → Developers → Webhooks (after you add the endpoint)
+      - key: STRIPE_PRICE_PRO
+        sync: false                    # the price ID behind your Pro Payment Link
+      - key: STRIPE_PRICE_LIFETIME
+        sync: false
+      - key: STRIPE_PRICE_ENTERPRISE
+        sync: false
