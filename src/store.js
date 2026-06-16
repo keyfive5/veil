@@ -14,8 +14,9 @@ const DEFAULTS = {
   //   'byo'     → user pastes their own Anthropic key (private, nothing leaves device).
   keyMode: 'managed',
   apiKey: '',                     // BYO Anthropic key — never leaves this machine
-  licenseKey: '',                 // Veil license (set automatically on activation)
-  plan: '',                       // 'pro' | 'lifetime' | 'enterprise' (set on activation)
+  licenseKey: '',                 // Veil license (set automatically: free on first run, or paid on activation)
+  plan: '',                       // 'free' | 'pro' | 'lifetime' | 'enterprise'
+  deviceId: '',                   // random id generated once, used to claim this device's free license
   // Production Veil server (Render):
   managedUrl: 'https://veil-server-ydz9.onrender.com',
   // Stripe Payment Link the "Start" button opens (LIVE):

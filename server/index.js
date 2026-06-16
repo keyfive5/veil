@@ -17,6 +17,8 @@ const APP_PUBLIC_URL = process.env.APP_PUBLIC_URL || `http://localhost:${PORT}`;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 const GROQ_KEY = process.env.GROQ_API_KEY || '';
 const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
+// The free tier runs on Groq's free Llama vision model ($0 to us). Override via env.
+const FREE_MODEL = process.env.FREE_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 // Dev escape hatches (off in prod): a static license list + "accept any key".
 const DEV_LICENSES = (process.env.VEIL_LICENSES || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -38,9 +40,12 @@ function checkLicense(key) {
   if (lic) {
     if (lic.status !== 'active') return { ok: false, code: 403, msg: 'License inactive — renew to continue.' };
     const u = db.getUsage(key);
-    if (u.remaining <= 0) return { ok: false, code: 429, msg: 'Monthly limit reached. Upgrade for more.' };
+    if (u.remaining <= 0) {
+      if (lic.plan === 'free') return { ok: false, code: 402, msg: "You've hit the free monthly limit — add your own key or upgrade for Claude." };
+      return { ok: false, code: 429, msg: 'Monthly limit reached. Upgrade for more.' };
+    }
     const after = db.incUsage(key);
-    return { ok: true, used: after.used, cap: after.cap };
+    return { ok: true, used: after.used, cap: after.cap, plan: lic.plan };
   }
   if (DEV_LICENSES.includes(key) || DEV_ACCEPT_ANY) {
     const u = devMeter(key);
@@ -68,6 +73,74 @@ setInterval(() => {
   for (const [k, v] of rlBuckets) if (now > v.reset) rlBuckets.delete(k);
 }, 5 * 60 * 1000).unref();
 
+// ---- Free tier: serve via Groq (Llama vision) in Anthropic's wire format ----
+// Translate an Anthropic /v1/messages body → OpenAI/Groq chat format.
+function anthropicToOpenAI(body) {
+  const msgs = [];
+  if (body.system) {
+    const sys = typeof body.system === 'string'
+      ? body.system
+      : (Array.isArray(body.system) ? body.system.map((b) => b.text || '').join('\n') : '');
+    if (sys) msgs.push({ role: 'system', content: sys });
+  }
+  for (const m of (body.messages || [])) {
+    if (typeof m.content === 'string') { msgs.push({ role: m.role, content: m.content }); continue; }
+    const parts = [];
+    for (const c of (m.content || [])) {
+      if (c.type === 'text') parts.push({ type: 'text', text: c.text });
+      else if (c.type === 'image' && c.source && c.source.type === 'base64') {
+        parts.push({ type: 'image_url', image_url: { url: `data:${c.source.media_type};base64,${c.source.data}` } });
+      }
+    }
+    msgs.push({ role: m.role, content: parts });
+  }
+  return msgs;
+}
+
+// Emit a one-shot answer as Anthropic-style SSE, so the app's Anthropic SDK parses
+// it unchanged (free answers arrive in one go — fits the "free is a bit slower" feel).
+function sendAnthropicSSE(res, text) {
+  res.setHeader('content-type', 'text/event-stream');
+  res.setHeader('cache-control', 'no-cache');
+  const w = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  w('message_start', { type: 'message_start', message: { id: 'msg_free', type: 'message', role: 'assistant', model: 'veil-free', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 0, output_tokens: 0 } } });
+  w('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
+  w('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+  w('content_block_stop', { type: 'content_block_stop', index: 0 });
+  w('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 0 } });
+  w('message_stop', { type: 'message_stop' });
+  res.end();
+}
+
+async function handleFree(req, res) {
+  if (process.env.FREE_FAKE === '1') return sendAnthropicSSE(res, 'Free AI test answer.'); // local testing without Groq
+  if (!GROQ_KEY) return res.status(500).json({ type: 'error', error: { message: 'Free AI not configured (no GROQ_API_KEY).' } });
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: FREE_MODEL,
+        messages: anthropicToOpenAI(req.body),
+        max_tokens: Math.min(req.body.max_tokens || 1024, 1024),
+        temperature: 0.7,
+      }),
+    });
+    if (!r.ok) {
+      const t = await r.text().catch(() => '');
+      if (r.status === 429) {
+        return res.status(503).json({ type: 'error', error: { type: 'overloaded_error', message: 'The free AI is busy right now — try again, or add your own key / upgrade for instant Claude.' } });
+      }
+      return res.status(502).json({ type: 'error', error: { message: 'Free AI error: ' + t.slice(0, 150) } });
+    }
+    const j = await r.json();
+    const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    sendAnthropicSSE(res, text || '(no response)');
+  } catch (e) {
+    res.status(502).json({ type: 'error', error: { message: 'Free AI error: ' + String(e) } });
+  }
+}
+
 // ---- Stripe webhook (RAW body — must be before express.json) ----
 app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
@@ -90,6 +163,23 @@ app.use(express.json({ limit: '30mb' }));
 app.get('/health', (_req, res) => res.json({
   ok: true, anthropic: !!ANTHROPIC_KEY, transcription: !!(GROQ_KEY || OPENAI_KEY), stripe: stripeLib.enabled,
 }));
+
+// ---- Free tier ----
+// Every new device gets a free license — no API key, no payment. Free licenses
+// run on the free Groq AI server-side (see /v1/messages), so they cost us nothing.
+// One license per device id (idempotent), so reinstalling doesn't reset it.
+app.post('/v1/free', rateLimit(30, 60000), (req, res) => {
+  const deviceId = String((req.body && req.body.deviceId) || '').trim();
+  if (!deviceId || deviceId.length > 128) return res.status(400).json({ error: 'invalid deviceId' });
+  try {
+    const lic = db.getOrCreateFree(deviceId);
+    const u = db.getUsage(lic.key);
+    res.json({ licenseKey: lic.key, plan: 'free', cap: lic.monthly_cap, remaining: u ? u.remaining : lic.monthly_cap });
+  } catch (e) {
+    console.error('[veil] /v1/free error:', e.message);
+    res.status(500).json({ error: 'could not start free tier' });
+  }
+});
 
 // ---- Activation (magic link) ----
 // The app calls this with the token from veil://activate?token=…
@@ -167,6 +257,8 @@ app.get('/v1/usage', rateLimit(60, 60000), (req, res) => {
 app.post('/v1/messages', rateLimit(120, 60000), async (req, res) => {
   const chk = checkLicense(req.header('x-api-key'));
   if (!chk.ok) return res.status(chk.code).json({ type: 'error', error: { type: 'authentication_error', message: chk.msg } });
+  // Free plan → free Groq AI. Paid/BYO → Claude.
+  if (chk.plan === 'free') return handleFree(req, res);
   if (!ANTHROPIC_KEY) return res.status(500).json({ type: 'error', error: { message: 'Server missing ANTHROPIC_API_KEY' } });
   try {
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {

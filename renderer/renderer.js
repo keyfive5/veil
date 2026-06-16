@@ -6,6 +6,7 @@ const els = {
   input: $('input'), askScreen: $('askScreen'),
   moreBtn: $('moreBtn'), moreMenu: $('moreMenu'),
   modeSelect: $('modeSelect'), listenPill: $('listenPill'), trustText: $('trustText'),
+  mUpgrade: $('mUpgrade'),
   mListen: $('mListen'), mPractice: $('mPractice'), mMaster: $('mMaster'),
   mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
   status: $('status'), statusText: $('statusText'),
@@ -88,6 +89,7 @@ els.moreBtn.addEventListener('click', (e) => { e.stopPropagation(); els.moreMenu
 document.addEventListener('click', (e) => {
   if (!els.moreMenu.hidden && !els.moreMenu.contains(e.target) && !els.moreBtn.contains(e.target)) closeMenu();
 });
+els.mUpgrade.addEventListener('click', () => { closeMenu(); if (cfg.checkoutUrl) window.veil.openExternal(cfg.checkoutUrl); else openSettings(); });
 els.mListen.addEventListener('click', () => { closeMenu(); toggleListen(); });
 els.mPractice.addEventListener('click', () => { closeMenu(); window.veil.openPractice(); });
 els.mMaster.addEventListener('click', () => { closeMenu(); setMasterMode(true); });
@@ -104,6 +106,8 @@ window.veil.onError((err) => {
   const msg = {
     'no-key': 'Add your key in Settings (the ••• menu) to start.',
     'bad-key': 'That key was rejected. Check it in Settings.',
+    'limit': "You've used up the free monthly limit. Add your own key (free) or upgrade for Claude — see the ••• menu.",
+    'busy': 'The free AI is busy right now — try again in a sec, or upgrade for instant Claude (••• menu).',
     'rate-limit': 'Rate limited. Wait a moment and try again.',
     'bad-request': 'The request was rejected: ' + (err.message || ''),
   }[err.code] || ('Something went wrong: ' + (err.message || 'unknown error'));
@@ -205,9 +209,14 @@ els.obByo.addEventListener('click', async (e) => {
 });
 window.veil.onActivated((r) => {
   if (r && r.ok) {
+    cfg.plan = r.plan;
     els.onboard.hidden = true;
     showAnswer();
-    setAnswer(`**You're in — ${r.plan || 'Veil'} plan. 🎉**\n\nHit **Ctrl+Enter** to read your screen, or just ask anything above.`, false);
+    if (r.plan === 'free') {
+      setAnswer("**You're on Veil free — no key needed. 🎉**\n\nIt runs on a free AI: solid, but a little slower and not as sharp as Claude. Hit **Ctrl+Enter** to try it.\n\nWant it faster & smarter? Add your own key or upgrade from the ••• menu.", false);
+    } else {
+      setAnswer(`**You're in — ${r.plan || 'Veil'} plan. 🎉**\n\nHit **Ctrl+Enter** to read your screen, or just ask anything above.`, false);
+    }
     els.input.focus();
   } else {
     obSay('Activation failed: ' + ((r && r.error) || 'unknown') + '. Try the link again.', true);

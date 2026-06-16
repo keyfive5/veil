@@ -10,6 +10,7 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const store = require('./store');
 const history = require('./history');
 const {
@@ -37,11 +38,43 @@ function getCreds() {
   return { apiKey: s.apiKey, baseURL: undefined, settings: s };
 }
 
-// Model selection. BYO users pick freely; managed mode is cost-guarded (we pay
-// the AI bill), so it uses a cheaper model unless the plan unlocks Opus.
+// Model selection. BYO users pick freely. Managed is cost-guarded: free plan runs
+// on the server's free Groq AI (the model sent here is ignored server-side), paid
+// plans use Claude.
 function modelFor(s) {
-  if (s.keyMode === 'managed') return s.plan === 'enterprise' ? 'claude-opus-4-8' : 'claude-sonnet-4-6';
+  if (s.keyMode === 'managed') {
+    if (s.plan === 'enterprise') return 'claude-opus-4-8';
+    if (s.plan === 'free') return 'claude-haiku-4-5'; // ignored server-side (routed to Groq) — placeholder
+    return 'claude-sonnet-4-6'; // pro / lifetime
+  }
   return s.model || 'claude-opus-4-8';
+}
+
+// Stable per-install id used to claim this device's free license.
+function ensureDeviceId() {
+  const s = store.read();
+  if (!s.deviceId) return store.write({ deviceId: crypto.randomUUID() }).deviceId;
+  return s.deviceId;
+}
+
+// Auto-claim a free license on first run so the app just works with no key and no
+// payment (it runs on the server's free Groq AI). No-op if a license already exists
+// or the user switched to BYO.
+async function ensureFree() {
+  const s = store.read();
+  if (s.keyMode !== 'managed' || s.licenseKey || !s.managedUrl) return;
+  const deviceId = ensureDeviceId();
+  try {
+    const r = await fetch(`${s.managedUrl.replace(/\/$/, '')}/v1/free`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deviceId }),
+    });
+    if (!r.ok) return;
+    const { licenseKey, plan } = await r.json();
+    if (licenseKey) {
+      store.write({ licenseKey, plan: plan || 'free', onboarded: true });
+      send('activate:result', { ok: true, plan: plan || 'free' });
+    }
+  } catch { /* offline — onboarding stays as the fallback */ }
 }
 
 // Exchange a magic-link token for a license and switch the app to managed mode.
@@ -96,6 +129,7 @@ function createWindow() {
   applyClickThrough(settings.clickThrough);
   win.setOpacity(settings.opacity ?? 1);
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  win.webContents.once('did-finish-load', () => { ensureDeviceId(); ensureFree(); });
   win.on('closed', () => { win = null; });
 }
 
@@ -180,6 +214,7 @@ ipcMain.handle('usage:get', async () => {
 
 // Ask Veil (optionally about the screen).
 ipcMain.on('ai:ask', async (_e, { prompt, includeScreenshot }) => {
+  await ensureFree(); // make sure a free license exists before the first ask
   const { apiKey, baseURL, settings } = getCreds();
   let imageBase64 = null;
   if (includeScreenshot) { send('ai:status', 'capturing'); imageBase64 = await captureScreen(); }

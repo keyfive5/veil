@@ -405,6 +405,8 @@ kbd {
 }
 .menu-item:hover { background: rgba(255,255,255,0.08); }
 .menu-item.danger:hover { color: var(--danger); }
+.menu-item.upgrade { color: var(--accent-2); font-weight: 600; }
+.menu-item.upgrade:hover { background: rgba(110,231,210,0.12); color: #fff; }
 .menu-sep { height: 1px; background: var(--stroke); margin: 5px 4px; }
 
 /* scrollbars */

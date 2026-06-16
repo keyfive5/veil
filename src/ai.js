@@ -108,6 +108,8 @@ async function streamAnswer({
     let code = 'error';
     const status = err && (err.status || err.statusCode);
     if (status === 401) code = 'bad-key';
+    else if (status === 402) code = 'limit';      // free monthly limit reached → upgrade
+    else if (status === 503) code = 'busy';       // free AI temporarily busy
     else if (status === 429) code = 'rate-limit';
     else if (status === 400) code = 'bad-request';
     onError({ code, message: (err && err.message) || String(err), status });

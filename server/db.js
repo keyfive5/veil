@@ -38,12 +38,18 @@ db.exec(`
     expires_at INTEGER,
     used INTEGER DEFAULT 0
   );
+  CREATE TABLE IF NOT EXISTS trials (
+    device_id TEXT PRIMARY KEY,
+    license_key TEXT,
+    created_at INTEGER
+  );
   CREATE INDEX IF NOT EXISTS idx_customers_stripe ON customers (stripe_customer_id);
   CREATE INDEX IF NOT EXISTS idx_customers_email ON customers (email);
 `);
 
 // Per-plan monthly request cap (the cost guard + upsell trigger).
 const PLAN_CAPS = {
+  free: parseInt(process.env.CAP_FREE || '500', 10),   // monthly free uses/device (runs on free Groq AI, $0 to us)
   pro: parseInt(process.env.CAP_PRO || '8000', 10),
   lifetime: parseInt(process.env.CAP_LIFETIME || '8000', 10),
   enterprise: parseInt(process.env.CAP_ENTERPRISE || '200000', 10),
@@ -106,13 +112,32 @@ function getUsage(key) {
   if (!lic) return null;
   const row = db.prepare('SELECT count FROM usage WHERE license_key = ? AND month = ?').get(key, monthKey());
   const used = row ? row.count : 0;
-  return { used, cap: lic.monthly_cap, remaining: Math.max(0, lic.monthly_cap - used) };
+  return { used, cap: lic.monthly_cap, remaining: Math.max(0, lic.monthly_cap - used), plan: lic.plan };
 }
 function incUsage(key) {
   const m = monthKey();
   db.prepare(`INSERT INTO usage (license_key, month, count) VALUES (?, ?, 1)
               ON CONFLICT(license_key, month) DO UPDATE SET count = count + 1`).run(key, m);
   return getUsage(key);
+}
+
+// One free license per device. Idempotent: same device id always gets the same
+// license (reinstalling doesn't hand out a fresh allowance). Free licenses run on
+// the free Groq AI server-side, so they cost us nothing.
+function getOrCreateFree(deviceId) {
+  const existing = db.prepare('SELECT license_key FROM trials WHERE device_id = ?').get(deviceId);
+  if (existing) {
+    const lic = getLicense(existing.license_key);
+    if (lic) return lic;
+  }
+  const key = genLicenseKey();
+  const cap = PLAN_CAPS.free;
+  const now = Date.now();
+  db.prepare('INSERT INTO licenses (key, customer_id, plan, monthly_cap, status, created_at) VALUES (?,?,?,?,?,?)')
+    .run(key, null, 'free', cap, 'active', now);
+  db.prepare('INSERT OR REPLACE INTO trials (device_id, license_key, created_at) VALUES (?,?,?)')
+    .run(deviceId, key, now);
+  return { key, plan: 'free', monthly_cap: cap, status: 'active' };
 }
 
 function newActivationToken(licenseKey, ttlMs = 15 * 60 * 1000) {
@@ -134,5 +159,5 @@ module.exports = {
   db, capFor,
   createCustomerWithLicense, getLicense, getCustomerByEmail, licenseForCustomerId,
   setLicenseStatus, deactivateByStripeCustomer,
-  getUsage, incUsage, newActivationToken, consumeToken,
+  getUsage, incUsage, getOrCreateFree, newActivationToken, consumeToken,
 };
