@@ -34,11 +34,15 @@ const DEFAULTS = {
 };
 
 function read() {
-  try {
-    return { ...DEFAULTS, ...JSON.parse(fs.readFileSync(FILE, 'utf8')) };
-  } catch {
-    return { ...DEFAULTS };
-  }
+  let saved = {};
+  try { saved = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
+  const merged = { ...DEFAULTS, ...saved };
+  // The server + checkout URLs are build constants, NOT user settings. Always use
+  // what's shipped in this build, so a value saved by an older build can never
+  // override them (that's what kept opening the old sandbox checkout).
+  merged.managedUrl = DEFAULTS.managedUrl;
+  merged.checkoutUrl = DEFAULTS.checkoutUrl;
+  return merged;
 }
 
 function write(patch) {
