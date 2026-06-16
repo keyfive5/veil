@@ -18,8 +18,8 @@ const DEFAULTS = {
   plan: '',                       // 'pro' | 'lifetime' | 'enterprise' (set on activation)
   // Production Veil server (Render):
   managedUrl: 'https://veil-server-ydz9.onrender.com',
-  // Stripe Payment Link the "Start" button opens (TEST link — swap for the live one when going live):
-  checkoutUrl: 'https://buy.stripe.com/test_14A7sL09Ban3cjx6xg6c000',
+  // Stripe Payment Link the "Start" button opens (LIVE):
+  checkoutUrl: 'https://buy.stripe.com/7sY6oHfZU8iwdMs2GIdAk00',
   model: 'claude-opus-4-8',       // BYO model choice (managed uses a cost-guarded model)
   mode: 'general',                // general | interview | sales | meeting | study | code
   context: '',                    // user's resume / product notes / cheat-sheet, fed into prompts
