@@ -33,9 +33,15 @@ async function planForSession(session) {
 // Returns { type, email?, token? }. Throws on invalid signature.
 async function verifyAndHandle(rawBody, signature) {
   if (!enabled) return { type: 'disabled' };
+  // Require a verified signature. Refuse to process unverified webhooks (without
+  // this, anyone who finds the URL could POST a fake "paid" event and mint licenses).
+  // Set ALLOW_UNVERIFIED_WEBHOOKS=1 ONLY for local testing without a secret.
+  if (!WEBHOOK_SECRET && process.env.ALLOW_UNVERIFIED_WEBHOOKS !== '1') {
+    throw new Error('STRIPE_WEBHOOK_SECRET not set — refusing unverified webhook');
+  }
   const event = WEBHOOK_SECRET
     ? stripe.webhooks.constructEvent(rawBody, signature, WEBHOOK_SECRET)
-    : JSON.parse(rawBody.toString()); // dev only — no signature verification
+    : JSON.parse(rawBody.toString()); // only reached with ALLOW_UNVERIFIED_WEBHOOKS=1
 
   switch (event.type) {
     case 'checkout.session.completed': {

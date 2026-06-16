@@ -10,6 +10,7 @@ const db = require('./db');
 const stripeLib = require('./stripe');
 
 const app = express();
+app.set('trust proxy', 1); // behind Render's proxy → req.ip is the real client
 const PORT = process.env.PORT || 8787;
 const APP_PUBLIC_URL = process.env.APP_PUBLIC_URL || `http://localhost:${PORT}`;
 
@@ -50,15 +51,32 @@ function checkLicense(key) {
   return { ok: false, code: 403, msg: 'Invalid or expired license key.' };
 }
 
+// Lightweight in-memory rate limiter (per key/IP). Bounds brute-force + cost abuse.
+const rlBuckets = new Map();
+function rateLimit(max, windowMs) {
+  return (req, res, next) => {
+    const id = req.header('x-api-key') || (req.header('authorization') || '') || req.ip || 'anon';
+    const now = Date.now();
+    let b = rlBuckets.get(id);
+    if (!b || now > b.reset) { b = { n: 0, reset: now + windowMs }; rlBuckets.set(id, b); }
+    if (++b.n > max) return res.status(429).json({ error: 'Too many requests — slow down.' });
+    next();
+  };
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rlBuckets) if (now > v.reset) rlBuckets.delete(k);
+}, 5 * 60 * 1000).unref();
+
 // ---- Stripe webhook (RAW body — must be before express.json) ----
 app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const result = await stripeLib.verifyAndHandle(req.body, req.header('stripe-signature'));
     if (result.type === 'activated') {
-      const link = `${APP_PUBLIC_URL}/go?token=${result.token}`;
-      // TODO: email `link` to result.email via your provider. For v1 we log it;
-      // the /go page also renders it so you can complete activation manually.
-      console.log(`[veil] activated ${result.plan} for ${result.email} → ${link}`);
+      // The real activation happens via the /success redirect; this is the backup
+      // path. Don't log the email or token link (sensitive). Wire an email provider
+      // here later to deliver `${APP_PUBLIC_URL}/go?token=<token>` to result.email.
+      console.log(`[veil] license activated (plan=${result.plan})`);
     }
     res.json({ received: true });
   } catch (err) {
@@ -75,7 +93,7 @@ app.get('/health', (_req, res) => res.json({
 
 // ---- Activation (magic link) ----
 // The app calls this with the token from veil://activate?token=…
-app.post('/v1/activate', (req, res) => {
+app.post('/v1/activate', rateLimit(20, 60000), (req, res) => {
   const { token } = req.body || {};
   const out = db.consumeToken(token);
   if (!out) return res.status(400).json({ error: 'Invalid or expired activation link.' });
@@ -114,25 +132,29 @@ app.get('/go', (req, res) => {
   <script>setTimeout(function(){location.href=${JSON.stringify(deep)}},400)</script>`);
 });
 
-// "Sign in on a new device" — emails a fresh activation link for an existing customer.
-app.post('/auth/magic', (req, res) => {
+// "Sign in on a new device" — sends a fresh activation link to the account's
+// EMAIL (so only the inbox owner can use it). The link is never returned in the
+// response or logged — otherwise anyone could request a login link for someone
+// else's email and take over the account.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+app.post('/auth/magic', rateLimit(10, 60000), (req, res) => {
   const email = (req.body && req.body.email || '').trim().toLowerCase();
-  if (!email) return res.status(400).json({ error: 'email required' });
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'valid email required' });
   const customer = db.getCustomerByEmail(email);
   const lic = customer && db.licenseForCustomerId(customer.id);
-  if (!lic || lic.status !== 'active') {
-    // Don't reveal whether the email exists.
-    return res.json({ ok: true });
+  if (lic && lic.status === 'active') {
+    const token = db.newActivationToken(lic.key);
+    // TODO: email this link to `email` via a provider (Resend/Postmark/SES):
+    //   `${APP_PUBLIC_URL}/go?token=${token}`
+    // Until then this feature is a no-op by design — the link is NOT exposed here.
+    void token;
   }
-  const token = db.newActivationToken(lic.key);
-  const link = `${APP_PUBLIC_URL}/go?token=${token}`;
-  // TODO: email `link`. For v1, also return it (so you can wire email later).
-  console.log(`[veil] magic link for ${email} → ${link}`);
-  res.json({ ok: true, link });
+  // Always the same response — never reveal whether the email exists, never leak the link.
+  res.json({ ok: true });
 });
 
 // Usage / quota — the app shows this and upsells when near the cap.
-app.get('/v1/usage', (req, res) => {
+app.get('/v1/usage', rateLimit(60, 60000), (req, res) => {
   const key = req.header('x-api-key') || (req.header('authorization') || '').replace(/^Bearer\s+/i, '');
   if (!key) return res.status(401).json({ error: 'missing key' });
   const u = db.getUsage(key);
@@ -142,7 +164,7 @@ app.get('/v1/usage', (req, res) => {
 });
 
 // ---- Reverse-proxy to Claude (streaming) ----
-app.post('/v1/messages', async (req, res) => {
+app.post('/v1/messages', rateLimit(120, 60000), async (req, res) => {
   const chk = checkLicense(req.header('x-api-key'));
   if (!chk.ok) return res.status(chk.code).json({ type: 'error', error: { type: 'authentication_error', message: chk.msg } });
   if (!ANTHROPIC_KEY) return res.status(500).json({ type: 'error', error: { message: 'Server missing ANTHROPIC_API_KEY' } });
@@ -169,7 +191,7 @@ app.post('/v1/messages', async (req, res) => {
 });
 
 // ---- Transcription (base64 audio → Groq/OpenAI) ----
-app.post('/v1/transcribe', async (req, res) => {
+app.post('/v1/transcribe', rateLimit(120, 60000), async (req, res) => {
   const key = (req.header('authorization') || '').replace(/^Bearer\s+/i, '') || req.header('x-api-key');
   const chk = checkLicense(key);
   if (!chk.ok) return res.status(chk.code).json({ error: chk.msg });
@@ -193,4 +215,8 @@ app.post('/v1/transcribe', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`[veil-server] listening on :${PORT}  (stripe=${stripeLib.enabled})`));
+app.listen(PORT, () => {
+  console.log(`[veil-server] listening on :${PORT}  (stripe=${stripeLib.enabled})`);
+  if (DEV_ACCEPT_ANY) console.warn('⚠️  DEV_ACCEPT_ANY is ON — ANY key is accepted. NEVER set this in production (it lets anyone use your AI for free).');
+  if (DEV_LICENSES.length) console.warn(`⚠️  VEIL_LICENSES is set (${DEV_LICENSES.length} static keys) — for local testing only; remove in production.`);
+});
