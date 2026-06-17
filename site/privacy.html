@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Veil</title>
+  <meta name="description" content="How Veil handles your data. Veil is local-first: in Bring-Your-Own-Key mode nothing touches our servers. This policy covers both BYO-key and managed (Pro) modes." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .legal { max-width: 820px; }
+    .legal .updated { text-align: center; color: var(--muted); font-size: 14px; margin-top: 10px; }
+    .legal h2 { text-align: left; font-size: clamp(22px, 3vw, 28px); margin-top: 44px; }
+    .legal h3 { font-size: 18px; margin-top: 26px; color: var(--text); }
+    .legal p, .legal li { color: var(--muted); font-size: 16px; }
+    .legal p { margin-top: 14px; }
+    .legal strong { color: var(--text); }
+    .legal ul { margin: 14px 0 0; padding-left: 22px; }
+    .legal li { margin: 7px 0; }
+    .legal a { color: var(--accent-2); }
+    .legal .lead { font-size: 18px; color: var(--text); margin-top: 22px; }
+    .legal .callout {
+      background: var(--panel); border: 1px solid var(--stroke);
+      border-radius: 14px; padding: 18px 20px; margin-top: 22px;
+    }
+    .legal .callout p { margin-top: 0; }
+    .legal table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 15px; }
+    .legal th, .legal td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--stroke); vertical-align: top; }
+    .legal th { color: var(--text); font-weight: 650; }
+    .legal td { color: var(--muted); }
+    .legal .back { display: inline-block; margin-top: 8px; font-size: 14px; color: var(--muted); text-decoration: none; }
+    .legal .back:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <header class="nav">
+    <a class="logo" href="index.html#top"><span class="logo-dot"></span> Veil</a>
+    <nav class="nav-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#privacy">Why private</a>
+      <a href="index.html#pricing">Pricing</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a class="btn btn-sm" href="index.html#download">Download</a>
+    </nav>
+  </header>
+
+  <section class="legal">
+    <a class="back" href="index.html">← Back to Veil</a>
+    <h1 style="font-size: clamp(32px, 5vw, 48px); margin-top: 18px;">Privacy Policy</h1>
+    <p class="updated">Last updated: June 17, 2026</p>
+
+    <p class="lead">
+      Veil is built privacy-first. The core promise is simple: in <strong>Bring-Your-Own-Key</strong> mode,
+      your screen, your audio, and your conversation history never touch our servers — because the app
+      doesn't send them there. This policy explains exactly what data exists, where it lives, and the one
+      situation where data does leave your device.
+    </p>
+
+    <div class="callout">
+      <p><strong>The short version.</strong> Veil has two modes. In <strong>BYO-key mode</strong> (Free), everything
+      stays on your computer and your requests go straight from your machine to the AI provider on your own key —
+      we never see them and have no account for you. In <strong>managed mode</strong> (Pro / Lifetime), your AI
+      requests are routed through Veil's server so we can run the AI for you and meter usage; that's the trade-off
+      for zero setup. You choose the mode.</p>
+    </div>
+
+    <h2>1. Who this applies to</h2>
+    <p>
+      This policy applies to the Veil desktop application ("Veil," "the app") and this website. Veil is operated by
+      the makers of Veil ("we," "us"). If you have questions, contact us at
+      <a href="mailto:hello@veil.app">hello@veil.app</a>.
+    </p>
+
+    <h2>2. What Veil does with your data, by mode</h2>
+    <table>
+      <thead>
+        <tr><th>Data</th><th>BYO-key mode (Free)</th><th>Managed mode (Pro / Lifetime)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Screenshots you capture</td>
+          <td>Sent directly from your device to Anthropic (Claude) on your key. Not stored by us.</td>
+          <td>Sent through Veil's managed server to Anthropic, then discarded. Not retained after the response.</td>
+        </tr>
+        <tr>
+          <td>Call / microphone audio (Listen mode)</td>
+          <td>Transcribed via the provider on your key (e.g. Groq Whisper). Audio and transcript stay local.</td>
+          <td>Routed through Veil's server for transcription, then discarded.</td>
+        </tr>
+        <tr>
+          <td>Conversation history &amp; transcripts</td>
+          <td>Stored only in a local file on your computer. Never uploaded.</td>
+          <td>Stored only in a local file on your computer. Never uploaded.</td>
+        </tr>
+        <tr>
+          <td>Settings &amp; API keys</td>
+          <td>Stored in a local settings file on your machine. Your key is never exposed to the web-facing UI.</td>
+          <td>No AI API key needed; we hold the provider keys on our server.</td>
+        </tr>
+        <tr>
+          <td>Account / license</td>
+          <td>None. No account, no sign-up.</td>
+          <td>A license key tied to your purchase, validated by our server.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Data stored on your device</h2>
+    <p>Veil keeps the following <strong>locally on your computer only</strong>, in both modes:</p>
+    <ul>
+      <li><strong>Conversation history</strong> — an append-only log of your questions, Claude's answers, and Listen-mode transcripts. This powers the "ask across all my chats" feature. It lives in a file on your machine and is never sent to us.</li>
+      <li><strong>Settings</strong> — your chosen mode, hotkeys, personal context (e.g. resume or product details you paste in), and, in BYO mode, your API key.</li>
+    </ul>
+    <p>You can delete this data at any time by clearing your history in the app or removing Veil's local data folder. We hold no copy, so deletion on your device is final.</p>
+
+    <h2>4. Data sent off your device</h2>
+    <h3>AI providers</h3>
+    <p>
+      To generate answers, Veil sends the relevant screenshot, text, or audio to an AI provider:
+    </p>
+    <ul>
+      <li><strong>Anthropic</strong> (Claude) for text and vision responses.</li>
+      <li><strong>Groq / Whisper</strong> (or a comparable provider) for live audio transcription in Listen mode.</li>
+    </ul>
+    <p>
+      In BYO-key mode, these requests go <strong>directly from your machine</strong> to the provider using your own key — we are
+      not in the path. In managed mode, they pass through <strong>Veil's server</strong>, which forwards them to the provider and
+      returns the result. Your data is handled by these providers under their own privacy terms; please review
+      <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic's privacy policy</a>
+      and your transcription provider's policy.
+    </p>
+
+    <h3>Payments (managed mode only)</h3>
+    <p>
+      If you buy Pro or Lifetime, payment is processed by <strong>Stripe</strong>. We do not see or store your full card
+      details — Stripe handles that. We receive a confirmation and your plan so we can issue a license key. To deliver
+      that license we may send a one-time activation link to the email address you used at checkout.
+    </p>
+
+    <h3>What we deliberately do NOT collect</h3>
+    <ul>
+      <li><strong>No telemetry or analytics</strong> in the app. We do not track your usage, clicks, or behavior.</li>
+      <li><strong>No content storage on our servers.</strong> In managed mode we forward AI requests but do not retain your screenshots, audio, or transcripts after the response is returned.</li>
+      <li><strong>No selling of data.</strong> We never sell or rent your information to anyone.</li>
+    </ul>
+
+    <h2>5. Managed-mode usage metering</h2>
+    <p>
+      In managed mode, our server records <strong>usage counts</strong> (e.g. number of requests) tied to your license key so we
+      can enforce plan limits and prevent abuse. This is operational metadata — counts and timestamps — not the
+      content of your screen, audio, or conversations.
+    </p>
+
+    <h2>6. The invisible overlay</h2>
+    <p>
+      Veil uses an operating-system content-protection flag to stay hidden from screen-sharing and recording tools.
+      This is a local display feature. It does not collect or transmit anything; it simply controls how your own OS
+      renders the Veil window.
+    </p>
+
+    <h2>7. Your choices &amp; rights</h2>
+    <ul>
+      <li><strong>Choose your mode.</strong> Use BYO-key mode for maximum privacy (nothing reaches us), or managed mode for convenience.</li>
+      <li><strong>Access &amp; deletion.</strong> Your history and settings are on your device — you control and can delete them directly. For managed-mode license/billing data, email <a href="mailto:hello@veil.app">hello@veil.app</a> to request access or deletion.</li>
+      <li><strong>Cancel anytime.</strong> Cancelling Pro stops future billing; you can switch back to free BYO-key mode and keep using Veil.</li>
+    </ul>
+
+    <h2>8. Children</h2>
+    <p>Veil is not directed to children under 13 (or the minimum age in your jurisdiction), and we do not knowingly collect their data.</p>
+
+    <h2>9. Changes to this policy</h2>
+    <p>
+      We may update this policy as Veil evolves. Material changes will be reflected by updating the "Last updated"
+      date above and, where appropriate, noting the change on this page.
+    </p>
+
+    <h2>10. Contact</h2>
+    <p>Questions about privacy? Email <a href="mailto:hello@veil.app">hello@veil.app</a>.</p>
+
+    <a class="back" href="index.html" style="margin-top: 36px;">← Back to Veil</a>
+  </section>
+
+  <footer class="foot">
+    <div class="foot-l"><span class="logo-dot"></span> Veil — the private AI copilot.</div>
+    <div class="foot-r"><a href="privacy.html" style="color:var(--muted);text-decoration:none;">Privacy</a> · Runs on your machine. Powered by Claude.</div>
+  </footer>
+</body>
+</html>
