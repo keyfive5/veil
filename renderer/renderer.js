@@ -6,6 +6,8 @@ const els = {
   input: $('input'), askScreen: $('askScreen'),
   moreBtn: $('moreBtn'), moreMenu: $('moreMenu'),
   modeSelect: $('modeSelect'), listenPill: $('listenPill'), trustText: $('trustText'),
+  privacyBadge: $('privacyBadge'),
+  listenWarn: $('listenWarn'), lwAgree: $('lwAgree'), lwCancel: $('lwCancel'),
   mUpgrade: $('mUpgrade'),
   mListen: $('mListen'), mPractice: $('mPractice'), mMaster: $('mMaster'),
   mRestore: $('mRestore'), mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
@@ -186,6 +188,21 @@ function requestSuggest() {
 
 function toggleListen() {
   if (listener && listener.active) { listener.stop(); return; }
+  if (!cfg.listenConsented) { showListenWarn(); return; }
+  actuallyStartListen();
+}
+// One-time consent / legal notice before the first time we capture call audio.
+function showListenWarn() {
+  els.panel.hidden = true; els.settings.hidden = true; els.onboard.hidden = true; els.transcriptPanel.hidden = true;
+  els.listenWarn.hidden = false;
+}
+els.lwCancel.addEventListener('click', () => { els.listenWarn.hidden = true; });
+els.lwAgree.addEventListener('click', async () => {
+  cfg = await window.veil.setSettings({ listenConsented: true });
+  els.listenWarn.hidden = true;
+  actuallyStartListen();
+});
+function actuallyStartListen() {
   const freeTier = (cfg.plan || '') === 'free';
   listener = new window.AudioListener({
     fast: !freeTier, // paid + BYO get the snappy pacing; managed-free is a touch slower
@@ -274,8 +291,22 @@ function applyKeyMode(km) {
   els.managedFields.hidden = !managed;
   els.byoFields.hidden = managed;
   [...els.keyMode.children].forEach((b) => b.classList.toggle('active', b.dataset.km === km));
+  setPrivacyBadge(km);
   if (managed) refreshUsage();
 }
+
+// Always-visible badge so the user knows where their data goes: 🔒 Local (own key,
+// nothing leaves the device) vs ☁ Cloud (managed — routed through Veil's servers).
+function setPrivacyBadge(km) {
+  const managed = (km || 'managed') === 'managed';
+  els.privacyBadge.textContent = managed ? '☁ Cloud' : '🔒 Local';
+  els.privacyBadge.classList.toggle('cloud', managed);
+  els.privacyBadge.classList.toggle('local', !managed);
+  els.privacyBadge.title = managed
+    ? 'Managed mode: your screen & audio go through Veil servers to run the AI (never stored). Click for privacy settings.'
+    : '100% local: nothing leaves this device. Click for privacy settings.';
+}
+els.privacyBadge.addEventListener('click', () => { closeMenu(); openSettings(); });
 async function loadSettings() {
   const s = await window.veil.getSettings();
   cfg = s;

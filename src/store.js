@@ -32,6 +32,7 @@ const DEFAULTS = {
   transcriptionProvider: 'groq',  // groq (free, fast) | openai
   transcriptionKey: '',           // Groq or OpenAI key, local only
   autoSuggest: false,             // auto-suggest a reply after each transcript update
+  listenConsented: false,         // user acknowledged the Listen-mode recording/consent notice
 };
 
 function read() {

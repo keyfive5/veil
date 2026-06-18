@@ -44,6 +44,7 @@
           <option value="code">Code</option>
         </select>
         <span class="livepill" id="listenPill" hidden><span class="lvdot"></span>Live</span>
+        <button class="pbadge" id="privacyBadge" title="Where your data goes — click for settings">🔒 Local</button>
         <span class="trust" id="trust"><span class="trust-dot"></span><span id="trustText">Hidden from screen share</span></span>
       </div>
 
@@ -75,6 +76,17 @@
         <div class="transcript-body" id="transcript"></div>
         <button class="listen-upsell" id="listenUpsell" hidden>⚡ Free transcribes in longer chunks — <b>upgrade to Pro</b> for near-instant replies →</button>
         <div class="panel-foot"><span class="hint">Hearing this call</span><button class="textbtn accent" id="suggestBtn">Suggest reply →</button></div>
+      </div>
+
+      <!-- Listen mode: one-time consent / legal notice -->
+      <div class="panel listen-warn" id="listenWarn" hidden>
+        <div class="lw-head">🎧 Before you listen</div>
+        <p class="lw-body">Listen mode captures the <b>other person's call audio</b> and your mic to transcribe the conversation. Recording or transcribing someone can require their consent depending on your local laws — some places need <b>everyone's</b> permission. Only use it where you're allowed to.</p>
+        <p class="lw-body sub">In managed mode this audio goes to Veil's servers to transcribe (never stored). For 100% local, use your own transcription key in Own-key mode.</p>
+        <div class="lw-actions">
+          <button class="textbtn" id="lwCancel">Cancel</button>
+          <button class="ob-btn primary" id="lwAgree">I understand — continue</button>
+        </div>
       </div>
 
       <!-- Answer panel -->
@@ -109,6 +121,7 @@
         </div>
 
         <div id="managedFields" hidden>
+          <p class="privacy-note warn">☁ Managed mode sends your screen &amp; audio to Veil's servers to run the AI — <b>never stored</b>. For 100% local &amp; private, switch to <b>Own key</b> above.</p>
           <div class="settings-row">
             <label>Veil license key</label>
             <input id="licenseKey" class="field" type="password" placeholder="VEIL-…" />
@@ -124,6 +137,7 @@
         </div>
 
         <div id="byoFields">
+          <p class="privacy-note good">🔒 Own key = <b>100% local</b>. Your screen, audio &amp; history never leave this device — nothing touches our servers.</p>
           <div class="settings-row">
             <label>Anthropic API key</label>
             <input id="apiKey" class="field" type="password" placeholder="sk-ant-…" />
