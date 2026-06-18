@@ -54,6 +54,7 @@
         <div class="menu-sep"></div>
         <button class="menu-item" id="mListen">Listen to the call</button>
         <button class="menu-item" id="mPractice">Practice interview</button>
+        <button class="menu-item" id="mLibrary">My chats (library)</button>
         <button class="menu-item" id="mMaster">Ask across all my chats</button>
         <div class="menu-sep"></div>
         <button class="menu-item" id="mRestore">Log in / restore purchase</button>
@@ -76,6 +77,17 @@
         <div class="transcript-body" id="transcript"></div>
         <button class="listen-upsell" id="listenUpsell" hidden>⚡ Free transcribes in longer chunks — <b>upgrade to Pro</b> for near-instant replies →</button>
         <div class="panel-foot"><span class="hint">Hearing this call</span><button class="textbtn accent" id="suggestBtn">Suggest reply →</button></div>
+      </div>
+
+      <!-- Library: the user's saved chats -->
+      <div class="panel library" id="library" hidden>
+        <div class="lib-head">
+          <span class="lib-title">Your chats</span>
+          <button class="textbtn" id="libClose">Close</button>
+        </div>
+        <div class="lib-list" id="libList"></div>
+        <button class="listen-upsell" id="libUpsell" hidden>⚡ Showing your latest 25 — <b>upgrade to Pro</b> for your full chat history →</button>
+        <div class="panel-foot"><span class="hint" id="libCount"></span><button class="textbtn danger" id="libClear">Clear all</button></div>
       </div>
 
       <!-- Listen mode: one-time consent / legal notice -->

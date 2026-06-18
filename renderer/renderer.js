@@ -10,7 +10,8 @@ const els = {
   listenWarn: $('listenWarn'), lwAgree: $('lwAgree'), lwCancel: $('lwCancel'),
   mUpgrade: $('mUpgrade'),
   mListen: $('mListen'), mPractice: $('mPractice'), mMaster: $('mMaster'),
-  mRestore: $('mRestore'), mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
+  mLibrary: $('mLibrary'), mRestore: $('mRestore'), mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
+  library: $('library'), libList: $('libList'), libUpsell: $('libUpsell'), libCount: $('libCount'), libClose: $('libClose'), libClear: $('libClear'),
   status: $('status'), statusText: $('statusText'),
   transcriptPanel: $('transcriptPanel'), transcript: $('transcript'), autoSuggest: $('autoSuggest'), suggestBtn: $('suggestBtn'),
   hearing: $('hearing'), hearLabel: $('hearLabel'), listenUpsell: $('listenUpsell'),
@@ -84,6 +85,50 @@ function setMasterMode(on) {
 }
 window.veil.onMasterChat(() => setMasterMode(!masterMode));
 
+// ---- Library (the user's saved chats) -------------------------------------
+let libEntries = [];
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+async function openLibrary() {
+  els.panel.hidden = true; els.settings.hidden = true; els.onboard.hidden = true;
+  els.transcriptPanel.hidden = true; els.listenWarn.hidden = true;
+  els.library.hidden = false;
+  const data = await window.veil.listHistory();
+  renderLibrary(data || { entries: [], total: 0, limited: false });
+}
+function renderLibrary(data) {
+  libEntries = data.entries || [];
+  if (!libEntries.length) {
+    els.libList.innerHTML = '<div class="lib-empty">No chats yet.<br>Ask Veil something (or hit Ctrl+Enter) and it\'ll show up here.</div>';
+  } else {
+    els.libList.innerHTML = libEntries.map((e, i) =>
+      `<div class="lib-item" data-i="${i}"><div class="lib-meta"><span class="lib-mode">${escapeHtml(e.mode)}</span><span class="lib-time">${fmtTime(e.ts)}</span></div><div class="lib-q">${escapeHtml(e.prompt || '[screenshot]')}</div><div class="lib-a markdown" hidden></div></div>`
+    ).join('');
+  }
+  els.libUpsell.hidden = !data.limited;
+  els.libCount.textContent = data.total ? `${data.shown || libEntries.length} of ${data.total}` : '';
+}
+els.libList.addEventListener('click', (ev) => {
+  const item = ev.target.closest('.lib-item'); if (!item) return;
+  const i = +item.dataset.i; const a = item.querySelector('.lib-a');
+  if (a.hidden) { a.innerHTML = renderMarkdown(libEntries[i].answer || '_(no answer saved)_'); a.hidden = false; item.classList.add('open'); }
+  else { a.hidden = true; item.classList.remove('open'); }
+});
+els.libClose.addEventListener('click', () => { els.library.hidden = true; els.input.focus(); });
+els.libUpsell.addEventListener('click', () => { if (cfg.checkoutUrl) window.veil.openExternal(cfg.checkoutUrl); else openSettings(); });
+els.libClear.addEventListener('click', async () => {
+  if (els.libClear.dataset.confirm) {
+    await window.veil.clearHistory();
+    renderLibrary({ entries: [], total: 0, limited: false });
+    els.libClear.textContent = 'Clear all'; delete els.libClear.dataset.confirm;
+  } else {
+    els.libClear.textContent = 'Click again to erase'; els.libClear.dataset.confirm = '1';
+    setTimeout(() => { els.libClear.textContent = 'Clear all'; delete els.libClear.dataset.confirm; }, 3000);
+  }
+});
+
 // ---- Mode dropdown --------------------------------------------------------
 els.modeSelect.addEventListener('change', () => window.veil.setSettings({ mode: els.modeSelect.value }));
 
@@ -97,6 +142,7 @@ els.mUpgrade.addEventListener('click', () => { closeMenu(); if (cfg.checkoutUrl)
 els.mListen.addEventListener('click', () => { closeMenu(); toggleListen(); });
 els.mPractice.addEventListener('click', () => { closeMenu(); window.veil.openPractice(); });
 els.mMaster.addEventListener('click', () => { closeMenu(); setMasterMode(true); });
+els.mLibrary.addEventListener('click', () => { closeMenu(); openLibrary(); });
 els.mRestore.addEventListener('click', () => { closeMenu(); showOnboarding(); els.obKey.focus(); });
 els.mSettings.addEventListener('click', () => { closeMenu(); openSettings(); });
 els.mHide.addEventListener('click', () => { closeMenu(); window.veil.hide(); });

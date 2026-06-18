@@ -125,7 +125,9 @@
     <p>
       In BYO-key mode, these requests go <strong>directly from your machine</strong> to the provider using your own key — we are
       not in the path. In managed mode, they pass through <strong>Veil's server</strong>, which forwards them to the provider and
-      returns the result. Your data is handled by these providers under their own privacy terms; please review
+      streams the result back. These requests are handled <strong>in memory only — we do not log or store the content</strong> of your
+      screenshots, audio, or prompts; once the AI responds, that content is gone from our server. Your data is then handled by these
+      providers under their own privacy terms; please review
       <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic's privacy policy</a>
       and your transcription provider's policy.
     </p>
@@ -133,14 +135,15 @@
     <h3>Payments (managed mode only)</h3>
     <p>
       If you buy Pro or Lifetime, payment is processed by <strong>Stripe</strong>. We do not see or store your full card
-      details — Stripe handles that. We receive a confirmation and your plan so we can issue a license key. To deliver
-      that license we may send a one-time activation link to the email address you used at checkout.
+      details — Stripe handles that. We receive a confirmation and your plan so we can issue your license key, which is shown
+      to you on the confirmation page right after payment (it's also how you log in on another device). No account or password
+      is required.
     </p>
 
     <h3>What we deliberately do NOT collect</h3>
     <ul>
       <li><strong>No telemetry or analytics</strong> in the app. We do not track your usage, clicks, or behavior.</li>
-      <li><strong>No content storage on our servers.</strong> In managed mode we forward AI requests but do not retain your screenshots, audio, or transcripts after the response is returned.</li>
+      <li><strong>No content logging or storage on our servers.</strong> In managed mode we forward AI requests in memory only — your screenshots, audio, and prompts are never written to disk, logged, or retained after the response is returned.</li>
       <li><strong>No selling of data.</strong> We never sell or rent your information to anyone.</li>
     </ul>
 

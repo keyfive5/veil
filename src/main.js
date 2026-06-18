@@ -202,6 +202,22 @@ ipcMain.handle('settings:set', (_e, patch) => {
 });
 ipcMain.handle('history:clear-convo', () => { convo = []; return true; });
 ipcMain.handle('history:stats', () => history.stats());
+
+// Library: list saved chats. Managed FREE tier sees only the most recent few (the
+// rest is the upsell); paid plans and BYO (own-key, the privacy power users) see all.
+const FREE_LIBRARY_LIMIT = 25;
+ipcMain.handle('history:list', () => {
+  const s = store.read();
+  const all = history.list(500); // newest first, perf-capped
+  const limitedFree = s.keyMode === 'managed' && s.plan === 'free' && all.length > FREE_LIBRARY_LIMIT;
+  return {
+    entries: limitedFree ? all.slice(0, FREE_LIBRARY_LIMIT) : all,
+    total: all.length,
+    limited: limitedFree,
+    shown: limitedFree ? FREE_LIBRARY_LIMIT : all.length,
+  };
+});
+ipcMain.handle('history:clear', () => { convo = []; return history.clearAll(); });
 ipcMain.handle('storage:info', () => storageInfo());
 ipcMain.handle('usage:get', async () => {
   const s = store.read();

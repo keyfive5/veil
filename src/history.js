@@ -58,6 +58,21 @@ function corpus(maxChars = 120000) {
   return out;
 }
 
+// Newest-first list of saved chats for the in-app Library, capped for performance.
+function list(max = 500) {
+  const all = readAll().reverse();
+  const sliced = max ? all.slice(0, max) : all;
+  return sliced.map((e) => ({
+    ts: e.ts, mode: e.mode || 'general', kind: e.kind || 'ask',
+    prompt: e.prompt || '', answer: e.answer || '',
+  }));
+}
+
+// Wipe the local history file (user-initiated; their data, their call).
+function clearAll() {
+  try { fs.unlinkSync(FILE); return true; } catch { return false; }
+}
+
 function stats() {
   const all = readAll();
   const byMode = {};
@@ -73,4 +88,4 @@ function stats() {
   };
 }
 
-module.exports = { append, readAll, countTerm, corpus, stats, FILE };
+module.exports = { append, readAll, countTerm, corpus, stats, list, clearAll, FILE };

@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('veil', {
 
   // history / storage / usage
   getStats: () => ipcRenderer.invoke('history:stats'),
+  listHistory: () => ipcRenderer.invoke('history:list'),
+  clearHistory: () => ipcRenderer.invoke('history:clear'),
   getStorage: () => ipcRenderer.invoke('storage:info'),
   getUsage: () => ipcRenderer.invoke('usage:get'),
 
