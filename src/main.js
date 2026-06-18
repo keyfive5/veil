@@ -304,14 +304,21 @@ ipcMain.handle('practice:turn', async (_e, { messages, context }) => {
 // Onboarding: open external links (Stripe checkout) + request a magic link.
 ipcMain.on('open:external', (_e, url) => { if (url && /^https?:\/\//i.test(url)) shell.openExternal(url); });
 ipcMain.on('activate:token', (_e, token) => activateWithToken(token)); // manual/testing path
-ipcMain.handle('auth:magic', async (_e, { email }) => {
+// "Log in / restore" — the user pastes their license key; the server validates it
+// (locally or via Stripe) and we switch the app into managed mode with their plan.
+ipcMain.handle('auth:restore', async (_e, { licenseKey }) => {
   const s = store.read();
   try {
-    const r = await fetch(`${(s.managedUrl || '').replace(/\/$/, '')}/auth/magic`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }),
+    const r = await fetch(`${(s.managedUrl || '').replace(/\/$/, '')}/v1/restore`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ licenseKey }),
     });
-    return await r.json();
-  } catch (e) { return { error: String(e) }; }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok: false, error: j.error || `HTTP ${r.status}` };
+    store.write({ licenseKey: j.licenseKey, plan: j.plan, keyMode: 'managed', onboarded: true });
+    send('activate:result', { ok: true, plan: j.plan });
+    if (win) { if (!visible) toggleVisibility(); win.showInactive(); }
+    return { ok: true, plan: j.plan };
+  } catch (e) { return { ok: false, error: String(e) }; }
 });
 
 ipcMain.on('window:hide', () => toggleVisibility());

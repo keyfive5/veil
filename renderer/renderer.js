@@ -8,13 +8,13 @@ const els = {
   modeSelect: $('modeSelect'), listenPill: $('listenPill'), trustText: $('trustText'),
   mUpgrade: $('mUpgrade'),
   mListen: $('mListen'), mPractice: $('mPractice'), mMaster: $('mMaster'),
-  mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
+  mRestore: $('mRestore'), mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
   status: $('status'), statusText: $('statusText'),
   transcriptPanel: $('transcriptPanel'), transcript: $('transcript'), autoSuggest: $('autoSuggest'), suggestBtn: $('suggestBtn'),
   hearing: $('hearing'), hearLabel: $('hearLabel'), listenUpsell: $('listenUpsell'),
   panel: $('panel'), answer: $('answer'), answerHint: $('answerHint'), copyBtn: $('copyBtn'),
   settings: $('settings'),
-  onboard: $('onboard'), obStart: $('obStart'), obEmail: $('obEmail'), obSignIn: $('obSignIn'), obStatus: $('obStatus'), obByo: $('obByo'),
+  onboard: $('onboard'), obStart: $('obStart'), obKey: $('obKey'), obRestore: $('obRestore'), obStatus: $('obStatus'), obByo: $('obByo'),
   keyMode: $('keyMode'), managedFields: $('managedFields'), byoFields: $('byoFields'),
   licenseKey: $('licenseKey'), managedUrl: $('managedUrl'), checkoutUrl: $('checkoutUrl'), getLicense: $('getLicense'),
   usageBox: $('usageBox'), usageFill: $('usageFill'), usageText: $('usageText'),
@@ -95,6 +95,7 @@ els.mUpgrade.addEventListener('click', () => { closeMenu(); if (cfg.checkoutUrl)
 els.mListen.addEventListener('click', () => { closeMenu(); toggleListen(); });
 els.mPractice.addEventListener('click', () => { closeMenu(); window.veil.openPractice(); });
 els.mMaster.addEventListener('click', () => { closeMenu(); setMasterMode(true); });
+els.mRestore.addEventListener('click', () => { closeMenu(); showOnboarding(); els.obKey.focus(); });
 els.mSettings.addEventListener('click', () => { closeMenu(); openSettings(); });
 els.mHide.addEventListener('click', () => { closeMenu(); window.veil.hide(); });
 els.mQuit.addEventListener('click', () => window.veil.quit());
@@ -235,14 +236,15 @@ els.obStart.addEventListener('click', () => {
     obSay('Almost there — set your Stripe checkout link in Settings → Advanced (or use your own key below for now).', true);
   }
 });
-els.obSignIn.addEventListener('click', async () => {
-  const email = (els.obEmail.value || '').trim();
-  if (!email || !email.includes('@')) { obSay('Enter the email you paid with.', true); return; }
-  obSay('Sending your sign-in link…');
-  const r = await window.veil.signIn(email);
-  if (r && r.error) obSay('Could not reach the server. Check your connection.', true);
-  else obSay('Check your email for a link to activate Veil on this device.');
+els.obRestore.addEventListener('click', async () => {
+  const key = (els.obKey.value || '').trim().toUpperCase();
+  if (!key) { obSay('Paste the license key you got after paying.', true); return; }
+  obSay('Logging you in…');
+  const r = await window.veil.restore(key);
+  // Success is handled by onActivated (shows the "you're in" panel). Only surface errors here.
+  if (!r || !r.ok) obSay('Could not log in: ' + ((r && r.error) || 'key not found') + '.', true);
 });
+els.obKey.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.obRestore.click(); });
 els.obByo.addEventListener('click', async (e) => {
   e.preventDefault();
   cfg = await window.veil.setSettings({ keyMode: 'byo' });

@@ -32,11 +32,21 @@ function devMeter(key) {
   return u;
 }
 
-// Returns { ok, code?, msg?, used?, cap? }. Real licenses come from the DB; dev
-// lists/flags are a local-testing convenience only.
-function checkLicense(key) {
+// Veil license key shape (VEIL-XXXX-XXXX-XXXX). Used to gate the Stripe lookup so
+// random/garbage keys never trigger a Stripe API call.
+const KEY_RE = /^VEIL-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/i;
+
+// Returns { ok, code?, msg?, used?, cap? }. Licenses come from the local cache; on a
+// cache miss for a real-looking key we rebuild it from Stripe (the durable store),
+// so paid keys keep working even without a hosted database. Dev lists/flags are a
+// local-testing convenience only.
+async function checkLicense(key) {
   if (!key) return { ok: false, code: 401, msg: 'Missing license key.' };
-  const lic = db.getLicense(key);
+  let lic = db.getLicense(key);
+  if (!lic && KEY_RE.test(key)) {
+    const restored = await stripeLib.restoreByLicenseKey(key);
+    if (restored) lic = db.upsertLicense({ key: restored.key, plan: restored.plan, customerId: null });
+  }
   if (lic) {
     if (lic.status !== 'active') return { ok: false, code: 403, msg: 'License inactive — renew to continue.' };
     const u = db.getUsage(key);
@@ -199,7 +209,7 @@ app.get('/success', async (req, res) => {
     const license = await stripeLib.provisionFromSessionId(sid);
     if (!license) return res.status(425).send('Payment is still processing — refresh in a few seconds.');
     const token = db.newActivationToken(license.key);
-    res.redirect(`/go?token=${token}`);
+    res.redirect(`/go?token=${token}&key=${encodeURIComponent(license.key)}`);
   } catch (e) {
     console.error('[veil] /success error:', e.message);
     res.status(400).send('Could not verify your payment. Contact support.');
@@ -210,37 +220,48 @@ app.get('/success', async (req, res) => {
 // custom-scheme links). Opens the app via veil://.
 app.get('/go', (req, res) => {
   const token = String(req.query.token || '').replace(/[^a-f0-9]/gi, '');
+  const key = String(req.query.key || '').replace(/[^A-Z0-9-]/gi, '').toUpperCase();
   const deep = `veil://activate?token=${token}`;
+  // Show the license key so the buyer can save it — it's how they sign in / restore
+  // Veil on another device or after a reinstall (no email or password).
+  const keyBlock = key ? `
+  <div class="keybox">
+    <div class="klabel">Your license key — save it to sign in on other devices</div>
+    <div class="krow"><code id="k">${key}</code><button class="copy" onclick="navigator.clipboard.writeText('${key}');this.textContent='Copied'">Copy</button></div>
+  </div>` : '';
   res.setHeader('content-type', 'text/html');
   res.end(`<!doctype html><meta charset="utf-8"><title>Activate Veil</title>
-  <style>body{background:#0a0b0f;color:#f3f4f8;font-family:-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center}
+  <style>body{background:#0a0b0f;color:#f3f4f8;font-family:-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center;padding:20px}
   a.btn{display:inline-block;margin-top:18px;padding:14px 28px;border-radius:12px;background:linear-gradient(135deg,#8b7bf0,#6a5ae0);color:#fff;text-decoration:none;font-weight:600}
-  .dot{width:14px;height:14px;border-radius:50%;background:#6ee7d2;display:inline-block;margin-bottom:14px}</style>
+  .dot{width:14px;height:14px;border-radius:50%;background:#6ee7d2;display:inline-block;margin-bottom:14px}
+  .keybox{margin:22px auto 0;max-width:380px;background:#14161e;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px}
+  .klabel{font-size:12px;color:#9aa1b2;margin-bottom:8px}
+  .krow{display:flex;gap:8px;align-items:center;justify-content:center}
+  code{font-size:16px;letter-spacing:1px;color:#6ee7d2;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .copy{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#f3f4f8;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px}</style>
   <div><div class="dot"></div><h1>You're in. 🎉</h1><p>Click below to open Veil and activate.</p>
   <a class="btn" href="${deep}">Open Veil →</a>
+  ${keyBlock}
   <p style="color:#9aa1b2;font-size:13px;margin-top:22px">Veil not open yet? Launch it, then click again.</p></div>
   <script>setTimeout(function(){location.href=${JSON.stringify(deep)}},400)</script>`);
 });
 
-// "Sign in on a new device" — sends a fresh activation link to the account's
-// EMAIL (so only the inbox owner can use it). The link is never returned in the
-// response or logged — otherwise anyone could request a login link for someone
-// else's email and take over the account.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-app.post('/auth/magic', rateLimit(10, 60000), (req, res) => {
-  const email = (req.body && req.body.email || '').trim().toLowerCase();
-  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'valid email required' });
-  const customer = db.getCustomerByEmail(email);
-  const lic = customer && db.licenseForCustomerId(customer.id);
-  if (lic && lic.status === 'active') {
-    const token = db.newActivationToken(lic.key);
-    // TODO: email this link to `email` via a provider (Resend/Postmark/SES):
-    //   `${APP_PUBLIC_URL}/go?token=${token}`
-    // Until then this feature is a no-op by design — the link is NOT exposed here.
-    void token;
+// "Log in / restore" on a new device or after a reinstall. The license key IS the
+// credential (like a password) — no email or account. We accept it if it's active in
+// the local cache OR can be restored from Stripe (the durable store). This is what
+// makes a paid subscription follow the user across devices, with no database to host.
+app.post('/v1/restore', rateLimit(20, 60000), async (req, res) => {
+  const key = String((req.body && req.body.licenseKey) || '').trim();
+  if (!KEY_RE.test(key)) return res.status(400).json({ error: 'Enter a valid license key (VEIL-XXXX-XXXX-XXXX).' });
+  let lic = db.getLicense(key);
+  if (!lic) {
+    const restored = await stripeLib.restoreByLicenseKey(key);
+    if (restored) lic = db.upsertLicense({ key: restored.key, plan: restored.plan });
   }
-  // Always the same response — never reveal whether the email exists, never leak the link.
-  res.json({ ok: true });
+  if (!lic || lic.status !== 'active') {
+    return res.status(404).json({ error: 'That license key was not found or is no longer active.' });
+  }
+  res.json({ licenseKey: lic.key, plan: lic.plan });
 });
 
 // Usage / quota — the app shows this and upsells when near the cap.
@@ -255,7 +276,7 @@ app.get('/v1/usage', rateLimit(60, 60000), (req, res) => {
 
 // ---- Reverse-proxy to Claude (streaming) ----
 app.post('/v1/messages', rateLimit(120, 60000), async (req, res) => {
-  const chk = checkLicense(req.header('x-api-key'));
+  const chk = await checkLicense(req.header('x-api-key'));
   if (!chk.ok) return res.status(chk.code).json({ type: 'error', error: { type: 'authentication_error', message: chk.msg } });
   // Free plan → free Groq AI. Paid/BYO → Claude.
   if (chk.plan === 'free') return handleFree(req, res);
@@ -285,7 +306,7 @@ app.post('/v1/messages', rateLimit(120, 60000), async (req, res) => {
 // ---- Transcription (base64 audio → Groq/OpenAI) ----
 app.post('/v1/transcribe', rateLimit(120, 60000), async (req, res) => {
   const key = (req.header('authorization') || '').replace(/^Bearer\s+/i, '') || req.header('x-api-key');
-  const chk = checkLicense(key);
+  const chk = await checkLicense(key);
   if (!chk.ok) return res.status(chk.code).json({ error: chk.msg });
   const provider = GROQ_KEY ? 'groq' : (OPENAI_KEY ? 'openai' : null);
   if (!provider) return res.status(500).json({ error: 'Server has no transcription key configured.' });

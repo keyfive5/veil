@@ -29,6 +29,44 @@ async function planForSession(session) {
   }
 }
 
+// Stripe is our durable, free store. We stamp the license key onto the Stripe
+// customer so a user can restore their subscription from just the key — even if our
+// local cache (SQLite) was wiped (e.g. a free-tier server with no persistent disk).
+async function saveLicenseToCustomer(customerId, key, plan) {
+  if (!enabled || !customerId) return;
+  try {
+    await stripe.customers.update(customerId, { metadata: { veil_license: key, veil_plan: plan } });
+  } catch (e) {
+    console.error('[veil] could not save license to Stripe customer:', e.message);
+  }
+}
+
+// Look a license key up in Stripe and decide if it's still entitled. Lifetime /
+// enterprise = always active; subscription plans = active only if a live subscription
+// exists (so cancellations revoke access without needing our own database).
+// Returns { key, plan, customerId } or null.
+async function restoreByLicenseKey(key) {
+  if (!enabled || !key) return null;
+  let res;
+  try {
+    res = await stripe.customers.search({ query: `metadata['veil_license']:'${key}'`, limit: 1 });
+  } catch (e) {
+    console.error('[veil] stripe customer search failed:', e.message);
+    return null;
+  }
+  const customer = res && res.data && res.data[0];
+  if (!customer) return null;
+  const plan = (customer.metadata && customer.metadata.veil_plan) || 'pro';
+  if (plan === 'lifetime' || plan === 'enterprise') return { key, plan, customerId: customer.id };
+  try {
+    const subs = await stripe.subscriptions.list({ customer: customer.id, status: 'active', limit: 1 });
+    if (subs.data.length) return { key, plan, customerId: customer.id };
+  } catch (e) {
+    console.error('[veil] subscription check failed:', e.message);
+  }
+  return null;
+}
+
 // Verify the webhook signature and act on the event.
 // Returns { type, email?, token? }. Throws on invalid signature.
 async function verifyAndHandle(rawBody, signature) {
@@ -52,6 +90,7 @@ async function verifyAndHandle(rawBody, signature) {
         stripeCustomerId: session.customer,
         plan,
       });
+      await saveLicenseToCustomer(session.customer, license.key, plan);
       const token = db.newActivationToken(license.key);
       return { type: 'activated', email: session.customer_email || (session.customer_details && session.customer_details.email), token, plan };
     }
@@ -77,7 +116,8 @@ async function provisionFromSessionId(sessionId) {
   const plan = await planForSession(session);
   const email = (session.customer_details && session.customer_details.email) || session.customer_email;
   const { license } = db.createCustomerWithLicense({ email, stripeCustomerId: session.customer, plan });
+  await saveLicenseToCustomer(session.customer, license.key, plan);
   return license;
 }
 
-module.exports = { enabled, verifyAndHandle, provisionFromSessionId, priceToPlan };
+module.exports = { enabled, verifyAndHandle, provisionFromSessionId, priceToPlan, restoreByLicenseKey };

@@ -55,6 +55,7 @@
         <button class="menu-item" id="mPractice">Practice interview</button>
         <button class="menu-item" id="mMaster">Ask across all my chats</button>
         <div class="menu-sep"></div>
+        <button class="menu-item" id="mRestore">Log in / restore purchase</button>
         <button class="menu-item" id="mSettings">Settings</button>
         <button class="menu-item" id="mHide">Hide</button>
         <button class="menu-item danger" id="mQuit">Quit Veil</button>
@@ -87,11 +88,12 @@
         <div class="ob-head"><span class="ob-dot"></span> Welcome to Veil</div>
         <p class="ob-sub">The private AI copilot that hides from screen share. No API key, no setup — just go.</p>
         <button class="ob-btn primary" id="obStart">Get Veil — no setup needed</button>
-        <div class="ob-or"><span>already paid? sign in</span></div>
+        <div class="ob-or"><span>already paid? log in</span></div>
         <div class="ob-signin">
-          <input id="obEmail" class="field" type="email" placeholder="you@email.com" autocomplete="email" />
-          <button class="ob-btn" id="obSignIn">Send link</button>
+          <input id="obKey" class="field" type="text" placeholder="VEIL-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" />
+          <button class="ob-btn" id="obRestore">Log in</button>
         </div>
+        <p class="ob-hint">Your license key was shown after payment — paste it to restore Veil on this device.</p>
         <div class="ob-status" id="obStatus" hidden></div>
         <a class="ob-byo" id="obByo">or use my own API key — free &amp; private →</a>
       </div>

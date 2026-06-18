@@ -94,12 +94,22 @@ function createCustomerWithLicense({ email, stripeCustomerId, plan }) {
 }
 
 const getLicense = (key) => db.prepare('SELECT * FROM licenses WHERE key = ?').get(key) || null;
-const getCustomerByEmail = (email) => db.prepare('SELECT * FROM customers WHERE email = ? ORDER BY created_at DESC LIMIT 1').get(email) || null;
-const licenseForCustomerId = (id) => db.prepare('SELECT * FROM licenses WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1').get(id) || null;
 
-function setLicenseStatus(key, status) {
-  db.prepare('UPDATE licenses SET status = ? WHERE key = ?').run(status, key);
+// Insert or refresh a license in the local cache. Used when restoring a paid license
+// from Stripe after the ephemeral cache was cleared (e.g. a free-tier server restart),
+// so the SQLite file is just a rebuildable cache — Stripe is the source of truth.
+function upsertLicense({ key, plan, customerId = null }) {
+  const existing = getLicense(key);
+  if (existing) {
+    db.prepare('UPDATE licenses SET plan = ?, monthly_cap = ?, status = ? WHERE key = ?')
+      .run(plan, capFor(plan), 'active', key);
+  } else {
+    db.prepare('INSERT INTO licenses (key, customer_id, plan, monthly_cap, status, created_at) VALUES (?,?,?,?,?,?)')
+      .run(key, customerId, plan, capFor(plan), 'active', Date.now());
+  }
+  return getLicense(key);
 }
+
 function deactivateByStripeCustomer(stripeCustomerId) {
   const c = db.prepare('SELECT id FROM customers WHERE stripe_customer_id = ?').get(stripeCustomerId);
   if (!c) return;
@@ -156,8 +166,8 @@ function consumeToken(token) {
 }
 
 module.exports = {
-  db, capFor,
-  createCustomerWithLicense, getLicense, getCustomerByEmail, licenseForCustomerId,
-  setLicenseStatus, deactivateByStripeCustomer,
+  db,
+  createCustomerWithLicense, getLicense, upsertLicense,
+  deactivateByStripeCustomer,
   getUsage, incUsage, getOrCreateFree, newActivationToken, consumeToken,
 };

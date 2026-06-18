@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('veil', {
 
   // onboarding (managed / no-key)
   openExternal: (url) => ipcRenderer.send('open:external', url),
-  signIn: (email) => ipcRenderer.invoke('auth:magic', { email }),
+  restore: (licenseKey) => ipcRenderer.invoke('auth:restore', { licenseKey }), // "log in" with the key
   activateToken: (token) => ipcRenderer.send('activate:token', token),
   onActivated: (cb) => ipcRenderer.on('activate:result', (_e, r) => cb(r)),
 
