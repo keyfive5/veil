@@ -65,10 +65,14 @@
       <!-- Live transcript -->
       <div class="panel transcript" id="transcriptPanel" hidden>
         <div class="transcript-head">
-          <span class="live">● LIVE</span>
+          <span class="hearing-wrap">
+            <span class="hearing" id="hearing"><span class="ring"></span><span class="ring"></span><span class="core"></span></span>
+            <span class="hear-label" id="hearLabel">Listening…</span>
+          </span>
           <label class="toggle small"><input type="checkbox" id="autoSuggest" /> <span>Auto-suggest</span></label>
         </div>
         <div class="transcript-body" id="transcript"></div>
+        <button class="listen-upsell" id="listenUpsell" hidden>⚡ Free transcribes in longer chunks — <b>upgrade to Pro</b> for near-instant replies →</button>
         <div class="panel-foot"><span class="hint">Hearing this call</span><button class="textbtn accent" id="suggestBtn">Suggest reply →</button></div>
       </div>
 

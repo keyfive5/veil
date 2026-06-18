@@ -11,6 +11,7 @@ const els = {
   mSettings: $('mSettings'), mHide: $('mHide'), mQuit: $('mQuit'),
   status: $('status'), statusText: $('statusText'),
   transcriptPanel: $('transcriptPanel'), transcript: $('transcript'), autoSuggest: $('autoSuggest'), suggestBtn: $('suggestBtn'),
+  hearing: $('hearing'), hearLabel: $('hearLabel'), listenUpsell: $('listenUpsell'),
   panel: $('panel'), answer: $('answer'), answerHint: $('answerHint'), copyBtn: $('copyBtn'),
   settings: $('settings'),
   onboard: $('onboard'), obStart: $('obStart'), obEmail: $('obEmail'), obSignIn: $('obSignIn'), obStatus: $('obStatus'), obByo: $('obByo'),
@@ -24,6 +25,7 @@ const els = {
 };
 
 let streaming = false, rawAnswer = '', transcriptText = '', listener = null, suggestDebounce = null;
+let pendingSuggest = false, pendingTimer = null;
 let masterMode = false;
 let cfg = {};
 
@@ -151,30 +153,71 @@ function suggestFromTranscript() {
   startStream(); els.answerHint.textContent = 'From the live call';
   window.veil.ask('This is the live transcript of a call I am on (others + me). Based on what was just said, tell me exactly what to say next.\n\nTRANSCRIPT:\n' + transcriptText.slice(-2000), false);
 }
+
+// Drives the "Veil can hear you" indicator from the live audio level.
+function setHearing(level, speaking) {
+  if (els.hearing) { els.hearing.style.setProperty('--lvl', level.toFixed(2)); els.hearing.classList.toggle('on', speaking); }
+  if (els.hearLabel) els.hearLabel.textContent = speaking ? 'Hearing you' : 'Listening…';
+  els.listenPill.classList.toggle('speaking', speaking);
+}
+
+function resolveSuggest() {
+  if (!pendingSuggest) return;
+  pendingSuggest = false; clearTimeout(pendingTimer);
+  els.suggestBtn.textContent = 'Suggest reply →';
+  suggestFromTranscript();
+}
+// Clicking "Suggest reply" first flushes the current cycle, so the reply is based on
+// what was JUST said — not a chunk still mid-transcription. Falls back after 1.8s if
+// there was nothing new to transcribe (e.g. they clicked during silence).
+function requestSuggest() {
+  if (streaming) return;
+  if (listener && listener.active) {
+    pendingSuggest = true;
+    els.suggestBtn.textContent = 'Catching up…';
+    listener.flush();
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(resolveSuggest, 1800);
+    return;
+  }
+  suggestFromTranscript();
+}
+
 function toggleListen() {
   if (listener && listener.active) { listener.stop(); return; }
+  const freeTier = (cfg.plan || '') === 'free';
   listener = new window.AudioListener({
+    fast: !freeTier, // paid + BYO get the snappy pacing; managed-free is a touch slower
+    onLevel: setHearing,
+    onPending: (p) => { if (!p) resolveSuggest(); },
     onTranscript: (t) => {
       transcriptText += (transcriptText ? ' ' : '') + t;
       els.transcript.textContent = transcriptText; els.transcript.scrollTop = els.transcript.scrollHeight;
-      if (els.autoSuggest.checked && !streaming) { clearTimeout(suggestDebounce); suggestDebounce = setTimeout(suggestFromTranscript, 600); }
+      if (els.autoSuggest.checked && !streaming && !pendingSuggest) { clearTimeout(suggestDebounce); suggestDebounce = setTimeout(suggestFromTranscript, 400); }
     },
     onState: (state, info) => {
       const live = state === 'listening';
       els.listenPill.hidden = !live;
       els.mListen.textContent = live ? 'Stop listening' : 'Listen to the call';
       els.transcriptPanel.hidden = !live;
+      if (els.listenUpsell) els.listenUpsell.hidden = !(live && freeTier);
       if (state === 'error') {
+        setHearing(0, false);
         showAnswer();
         if (String(info).includes('no-transcription-key')) { setAnswer('**⚠ Add a transcription key in Settings → Live audio (or switch to a Veil key, which includes it).**', false); openSettings(); }
         else setAnswer('**⚠ Listen: ' + (info || 'audio error') + '**', false);
       }
-      if (state === 'stopped') { els.listenPill.hidden = true; els.mListen.textContent = 'Listen to the call'; els.transcriptPanel.hidden = true; }
+      if (state === 'stopped') {
+        setHearing(0, false);
+        els.listenPill.hidden = true; els.mListen.textContent = 'Listen to the call'; els.transcriptPanel.hidden = true;
+        if (els.listenUpsell) els.listenUpsell.hidden = true;
+      }
     },
   });
   transcriptText = ''; els.transcript.textContent = ''; listener.start();
 }
-els.suggestBtn.addEventListener('click', suggestFromTranscript);
+els.suggestBtn.addEventListener('click', requestSuggest);
+if (els.listenUpsell) els.listenUpsell.addEventListener('click', () => { if (cfg.checkoutUrl) window.veil.openExternal(cfg.checkoutUrl); else openSettings(); });
 els.autoSuggest.addEventListener('change', () => window.veil.setSettings({ autoSuggest: els.autoSuggest.checked }));
 
 // ---- Onboarding (no-key / managed default) --------------------------------
