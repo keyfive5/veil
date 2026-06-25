@@ -11,7 +11,7 @@ A Mac app can only be built on a Mac, so we build it in the cloud:
    - Download the `.dmg` from the run's **Artifacts** ("Veil-macOS-dmg"), and
    - it's also attached to the **v0.1.0 Release** (next to the Windows installer).
 
-It builds both **Apple Silicon (arm64)** and **Intel (x64)** dmgs — use the one matching your Mac (arm64 for M1/M2/M3/M4).
+It builds a single **universal** dmg (`Veil-<version>-mac.dmg`) that runs on **both Apple Silicon and Intel** Macs — no need to pick.
 
 ## Installing (first time)
 The build is **unsigned** for now (no Apple Developer account yet), so macOS Gatekeeper will say *"Veil can't be opened because Apple cannot check it…"*. To open it:

@@ -49,7 +49,7 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64", "x64"]
+          "arch": ["universal"]
         }
       ],
       "category": "public.app-category.productivity",
@@ -63,6 +63,9 @@
         "NSCameraUsageDescription": "Veil uses your camera only for the optional self-view in Practice interviews.",
         "LSMinimumSystemVersion": "11.0"
       }
+    },
+    "dmg": {
+      "artifactName": "Veil-${version}-mac.dmg"
     }
   },
   "dependencies": {
