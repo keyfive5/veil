@@ -1,0 +1,49 @@
+name: Build macOS app
+
+# How to use (no terminal needed):
+#   GitHub repo -> Actions tab -> "Build macOS app" -> "Run workflow" button.
+#   When it finishes (~5 min), download the .dmg from the run's "Artifacts",
+#   and it's also attached to the v0.1.0 Release.
+#
+# This builds an UNSIGNED app (no Apple Developer account yet), so on first open
+# macOS shows a Gatekeeper warning -> right-click the app -> Open -> Open.
+# Once you have an Apple Developer account we add notarization here and that
+# warning disappears. This workflow does NOT touch the Windows build.
+
+on:
+  workflow_dispatch: {}        # the "Run workflow" button
+  push:
+    tags: ['v*']               # also build when a version tag is pushed
+
+permissions:
+  contents: write              # needed to attach the .dmg to a Release
+
+jobs:
+  build-mac:
+    runs-on: macos-latest      # free macOS runner (public repo)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build macOS .dmg (unsigned)
+        run: npm run dist:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # don't look for a signing cert (none yet)
+
+      - name: Upload .dmg as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Veil-macOS-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
+
+      - name: Attach .dmg to the v0.1.0 Release
+        run: gh release upload v0.1.0 dist/*.dmg --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

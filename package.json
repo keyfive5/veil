@@ -46,8 +46,23 @@
       "artifactName": "Veil-Portable-${version}.${ext}"
     },
     "mac": {
-      "target": "dmg",
-      "category": "public.app-category.productivity"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon-mac.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Veil uses your microphone for Listen mode and for voice answers in Practice interviews.",
+        "NSCameraUsageDescription": "Veil uses your camera only for the optional self-view in Practice interviews.",
+        "LSMinimumSystemVersion": "11.0"
+      }
     }
   },
   "dependencies": {
