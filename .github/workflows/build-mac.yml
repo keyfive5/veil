@@ -32,9 +32,9 @@ jobs:
         run: npm install
 
       - name: Build macOS .dmg (unsigned)
-        run: npm run dist:mac
+        run: npm run dist:mac -- --publish never   # build only; we attach to the Release ourselves below
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false   # don't look for a signing cert (none yet)
+          CSC_IDENTITY_AUTO_DISCOVERY: false       # don't look for a signing cert (none yet)
 
       - name: Upload .dmg as a downloadable artifact
         uses: actions/upload-artifact@v4
