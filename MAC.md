@@ -36,5 +36,14 @@ On macOS, the browser/OS does **not** allow capturing the *other person's* call 
 
 On Windows, Listen captures system + mic as usual — unchanged.
 
-## Later: remove the Gatekeeper warning
-Once you have an **Apple Developer account ($99/yr)**, we add notarization to `.github/workflows/build-mac.yml` (Apple ID / app-specific password / Team ID stored as GitHub secrets). After that, the dmg opens with no warning — same idea as Azure Trusted Signing on Windows.
+## Removing the Gatekeeper warning (the only real fix = notarization)
+The "Apple could not verify Veil…" warning only goes away if the app is **signed with an Apple Developer ID cert and notarized by Apple**. That requires the paid **Apple Developer Program ($99/yr)** — there is no free path.
+
+**You do (one-time, ~30 min):**
+1. Enroll at <https://developer.apple.com/programs/> ($99/yr).
+2. In the Apple Developer site → Certificates → create a **"Developer ID Application"** certificate, then export it from Keychain as a **.p12** with a password.
+3. Create an **app-specific password** at <https://account.apple.com> (Sign-In & Security → App-Specific Passwords) for notarization.
+4. Note your **Team ID** (Apple Developer → Membership).
+5. In the GitHub repo → Settings → Secrets and variables → Actions, add: `MAC_CERT_P12` (base64 of the .p12), `MAC_CERT_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`.
+
+**I do (once the secrets exist):** update `.github/workflows/build-mac.yml` to import the cert and notarize during the build, plus `build.mac.notarize` in `package.json`. After that every `.dmg` opens with no warning. Same idea as Azure Trusted Signing on Windows.
