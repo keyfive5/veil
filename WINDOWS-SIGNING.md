@@ -13,7 +13,7 @@ an EV cert + USB token.
 2. Create a **Trusted Signing account** (search "Trusted Signing" in the portal → Create). Pick a region (e.g. East US) and the **Basic** plan.
 3. Inside it, create a **Certificate Profile**:
    - **Public Trust** type (this is what removes the SmartScreen warning).
-   - **Identity validation:** choose **Individual** if ExceedNorth is a newer business (validates *you* with a government ID — no business-history requirement). Choose **Organization** only if the business has the required verifiable history. *This is the step that takes time.*
+   - **Identity validation: choose Individual.** ← your chosen path. Validates *you* with a government ID (have it ready) — no business-history requirement, usually faster. Your legal name (**Hasan Zafar**) becomes the verified publisher shown on the installer. *This is the step that takes time — start it first.*
 
 ## Step 2 — Service principal so the cloud builder can sign (you, ~5 min once Step 1 is approved)
 1. Azure portal → **Microsoft Entra ID → App registrations → New registration** (name it "veil-signing"). Note the **Application (client) ID** and **Directory (tenant) ID**.
@@ -31,7 +31,7 @@ Repo → **Settings → Secrets and variables → Actions**, add:
 | `AZURE_ENDPOINT` | your region endpoint, e.g. `https://eus.codesigning.azure.net/` |
 | `AZURE_ACCOUNT` | the Trusted Signing **account** name |
 | `AZURE_PROFILE` | the **certificate profile** name |
-| `AZURE_PUBLISHER_NAME` | the validated identity name (your name, or "ExceedNorth") — must match the cert |
+| `AZURE_PUBLISHER_NAME` | your validated legal name, **Hasan Zafar** — must match the cert exactly |
 
 ## Step 4 — I flip it on
 `.github/workflows/build-win.yml` already auto-detects these secrets: with them present it
