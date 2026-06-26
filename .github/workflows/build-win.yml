@@ -1,0 +1,67 @@
+name: Build Windows app
+
+# How to use (no terminal): GitHub repo -> Actions -> "Build Windows app" -> Run workflow.
+# The installer is attached to the v0.1.0 Release.
+#
+# SIGNING (Azure Trusted Signing) auto-detects whether the Azure secrets are set:
+#   - secrets present -> SIGNED installer (no "Windows protected your PC" warning)
+#   - secrets absent  -> unsigned installer (works, but shows the SmartScreen warning)
+# Add these repo secrets to turn signing on (see WINDOWS-SIGNING.md):
+#   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
+#   AZURE_ENDPOINT, AZURE_ACCOUNT, AZURE_PROFILE, AZURE_PUBLISHER_NAME
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    env:
+      HAS_AZURE: ${{ secrets.AZURE_CLIENT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+        shell: bash
+
+      - name: Build installer (signed via Azure Trusted Signing)
+        if: env.HAS_AZURE == 'true'
+        shell: bash
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          npm run dist:win -- --publish never \
+            -c.win.azureSignOptions.publisherName="${{ secrets.AZURE_PUBLISHER_NAME }}" \
+            -c.win.azureSignOptions.endpoint="${{ secrets.AZURE_ENDPOINT }}" \
+            -c.win.azureSignOptions.codeSigningAccountName="${{ secrets.AZURE_ACCOUNT }}" \
+            -c.win.azureSignOptions.certificateProfileName="${{ secrets.AZURE_PROFILE }}"
+
+      - name: Build installer (unsigned)
+        if: env.HAS_AZURE != 'true'
+        shell: bash
+        run: npm run dist:win -- --publish never
+
+      - name: Upload installer as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Veil-Windows
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: Attach installer to the v0.1.0 Release
+        shell: bash
+        run: gh release upload v0.1.0 dist/Veil-Setup-0.1.0.exe dist/Veil-Portable-0.1.0.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
