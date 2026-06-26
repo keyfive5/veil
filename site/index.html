@@ -301,5 +301,21 @@
     <div class="foot-l"><span class="logo-dot"></span> Veil — the private AI copilot.</div>
     <div class="foot-r"><a href="privacy.html" style="color:var(--muted);text-decoration:none;">Privacy</a> · Runs on your machine. Powered by Claude, on your key.</div>
   </footer>
+
+  <!-- Privacy-friendly, cookieless, first-party analytics: just aggregate counts,
+       no cookies, no IPs, no personal data. See privacy.html. -->
+  <script>
+  (function () {
+    var S = 'https://veil-server-ydz9.onrender.com/v1/hit?e=';
+    function hit(e) { try { fetch(S + e, { mode: 'no-cors', keepalive: true, cache: 'no-store' }); } catch (_) {} }
+    hit('home');
+    document.addEventListener('click', function (ev) {
+      var a = ev.target.closest && ev.target.closest('a[href]'); if (!a) return;
+      var h = a.getAttribute('href') || '';
+      if (h.indexOf('Veil-Setup-') > -1) hit('download_win');
+      else if (h.indexOf('-mac.dmg') > -1) hit('download_mac');
+    }, true);
+  })();
+  </script>
 </body>
 </html>

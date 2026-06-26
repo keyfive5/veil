@@ -174,6 +174,55 @@ app.get('/health', (_req, res) => res.json({
   ok: true, anthropic: !!ANTHROPIC_KEY, transcription: !!(GROQ_KEY || OPENAI_KEY), stripe: stripeLib.enabled,
 }));
 
+// ---- First-party website analytics (cookieless, aggregate counts only, no PII) ----
+const HIT_EVENTS = new Set(['home', 'download_win', 'download_mac']);
+app.get('/v1/hit', rateLimit(240, 60000), (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const e = String(req.query.e || '');
+  if (HIT_EVENTS.has(e)) { try { db.bumpHit(e); } catch (_) {} }
+  res.status(204).end();
+});
+
+// ---- Private stats dashboard (open on your phone) — gated by ?t=<STATS_TOKEN> ----
+const STATS_TOKEN = process.env.STATS_TOKEN || '';
+async function githubDownloads() {
+  try {
+    const r = await fetch('https://api.github.com/repos/keyfive5/veil/releases/latest', { headers: { 'user-agent': 'veil-stats' } });
+    if (!r.ok) return [];
+    return ((await r.json()).assets || []).map((a) => ({ name: a.name, downloads: a.download_count }));
+  } catch { return []; }
+}
+app.get('/admin/stats', async (req, res) => {
+  if (!STATS_TOKEN || req.query.t !== STATS_TOKEN) return res.status(403).send('Forbidden — append ?t=YOUR_STATS_TOKEN');
+  const s = db.analyticsSummary();
+  const dl = await githubDownloads();
+  const ev = (k) => s.events[k] || { total: 0, last7: 0, today: 0 };
+  const home = ev('home'), dw = ev('download_win'), dm = ev('download_mac');
+  const plans = Object.fromEntries(s.licenses.byPlan.map((p) => [p.plan || 'unknown', p.c]));
+  const paid = (plans.pro || 0) + (plans.lifetime || 0) + (plans.enterprise || 0);
+  const card = (label, big, sub) => `<div class="c"><div class="l">${label}</div><div class="b">${big}</div><div class="s">${sub || ''}</div></div>`;
+  const dlRows = dl.map((a) => `<tr><td>${a.name}</td><td>${a.downloads}</td></tr>`).join('') || '<tr><td>(none)</td><td>0</td></tr>';
+  res.setHeader('content-type', 'text/html');
+  res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="60"><title>Veil stats</title>
+  <style>body{margin:0;background:#0a0b0f;color:#f3f4f8;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:18px}
+  h1{font-size:20px;margin:0 0 4px}.t{color:#9aa0ad;font-size:12px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .c{background:#14161e;border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:14px}
+  .l{color:#9aa0ad;font-size:12px}.b{font-size:30px;font-weight:750;margin-top:4px}
+  .s{color:#6ee7d2;font-size:12px;margin-top:4px}
+  h2{font-size:14px;color:#9aa0ad;margin:22px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}td{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)}td:last-child{text-align:right;font-weight:700}</style>
+  <h1>● Veil — live stats</h1><div class="t">auto-refreshes every 60s · ${s.month}</div>
+  <div class="grid">
+    ${card('Site visits (today)', home.today, `${home.last7} this week · ${home.total} all-time`)}
+    ${card('Active users (month)', s.licenses.activeThisMonth, `${s.licenses.requestsThisMonth} AI requests`)}
+    ${card('Download clicks', dw.total + dm.total, `Win ${dw.total} · Mac ${dm.total}`)}
+    ${card('Installs (licenses)', s.licenses.total, `${paid} paid · ${plans.free || 0} free`)}
+  </div>
+  <h2>Actual downloads (from GitHub)</h2>
+  <table>${dlRows}</table>`);
+});
+
 // ---- Free tier ----
 // Every new device gets a free license — no API key, no payment. Free licenses
 // run on the free Groq AI server-side (see /v1/messages), so they cost us nothing.

@@ -43,6 +43,13 @@ db.exec(`
     license_key TEXT,
     created_at INTEGER
   );
+  -- First-party, cookieless website analytics: aggregate counts only, no IP / no PII.
+  CREATE TABLE IF NOT EXISTS analytics (
+    event TEXT,
+    day TEXT,
+    count INTEGER DEFAULT 0,
+    PRIMARY KEY (event, day)
+  );
   CREATE INDEX IF NOT EXISTS idx_customers_stripe ON customers (stripe_customer_id);
   CREATE INDEX IF NOT EXISTS idx_customers_email ON customers (email);
 `);
@@ -165,9 +172,39 @@ function consumeToken(token) {
   return { licenseKey: lic.key, plan: lic.plan };
 }
 
+// ---- First-party analytics (aggregate counts only) ----
+const today = () => new Date().toISOString().slice(0, 10);
+
+function bumpHit(event) {
+  db.prepare(`INSERT INTO analytics (event, day, count) VALUES (?, ?, 1)
+              ON CONFLICT(event, day) DO UPDATE SET count = count + 1`).run(event, today());
+}
+
+// Everything the stats dashboard needs: site events + license/usage signal.
+function analyticsSummary() {
+  const t = today();
+  const since = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+  const events = {};
+  for (const r of db.prepare('SELECT event, day, count FROM analytics').all()) {
+    const e = events[r.event] || (events[r.event] = { total: 0, last7: 0, today: 0 });
+    e.total += r.count;
+    if (r.day >= since) e.last7 += r.count;
+    if (r.day === t) e.today += r.count;
+  }
+  const m = monthKey();
+  const licenses = {
+    total: db.prepare('SELECT COUNT(*) c FROM licenses').get().c,
+    byPlan: db.prepare('SELECT plan, COUNT(*) c FROM licenses GROUP BY plan').all(),
+    activeThisMonth: db.prepare('SELECT COUNT(DISTINCT license_key) c FROM usage WHERE month = ? AND count > 0').get(m).c,
+    requestsThisMonth: db.prepare('SELECT COALESCE(SUM(count),0) c FROM usage WHERE month = ?').get(m).c,
+  };
+  return { events, licenses, month: m };
+}
+
 module.exports = {
   db,
   createCustomerWithLicense, getLicense, upsertLicense,
   deactivateByStripeCustomer,
   getUsage, incUsage, getOrCreateFree, newActivationToken, consumeToken,
+  bumpHit, analyticsSummary,
 };
