@@ -2,25 +2,34 @@ name: Build macOS app
 
 # How to use (no terminal needed):
 #   GitHub repo -> Actions tab -> "Build macOS app" -> "Run workflow" button.
-#   When it finishes (~5 min), download the .dmg from the run's "Artifacts",
-#   and it's also attached to the v0.1.0 Release.
+#   When it finishes (~5 min), the .dmg is attached to the v0.1.0 Release and
+#   downloadable from the run's Artifacts.
 #
-# This builds an UNSIGNED app (no Apple Developer account yet), so on first open
-# macOS shows a Gatekeeper warning -> right-click the app -> Open -> Open.
-# Once you have an Apple Developer account we add notarization here and that
-# warning disappears. This workflow does NOT touch the Windows build.
+# SIGNING: this workflow auto-detects whether Apple signing secrets are set.
+#   - If MAC_CERT_P12 (+ the other Apple secrets) exist  -> SIGNED + NOTARIZED dmg
+#     (opens with no Gatekeeper warning).
+#   - If they don't exist yet                            -> unsigned dmg
+#     (works, but shows the "Apple could not verify" warning).
+# Add these repo secrets to turn on notarization (see MAC.md for how to get them):
+#   MAC_CERT_P12, MAC_CERT_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+#
+# This workflow never touches the Windows build.
 
 on:
-  workflow_dispatch: {}        # the "Run workflow" button
+  workflow_dispatch: {}
   push:
-    tags: ['v*']               # also build when a version tag is pushed
+    tags: ['v*']
 
 permissions:
-  contents: write              # needed to attach the .dmg to a Release
+  contents: write
 
 jobs:
   build-mac:
-    runs-on: macos-latest      # free macOS runner (public repo)
+    runs-on: macos-latest
+    env:
+      # 'true' only when the certificate secret is present. (secrets can't be used
+      # directly in step `if:` conditions, so we surface it as an env var here.)
+      HAS_SIGNING: ${{ secrets.MAC_CERT_P12 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,10 +40,34 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build macOS .dmg (unsigned)
-        run: npm run dist:mac -- --publish never   # build only; we attach to the Release ourselves below
+      - name: Import Apple Developer ID certificate
+        if: env.HAS_SIGNING == 'true'
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false       # don't look for a signing cert (none yet)
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          echo "$MAC_CERT_P12" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security set-keychain-settings build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
+          rm /tmp/cert.p12
+
+      - name: Build .dmg (signed + notarized)
+        if: env.HAS_SIGNING == 'true'
+        run: npm run dist:mac -- --publish never -c.mac.notarize=true
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build .dmg (unsigned)
+        if: env.HAS_SIGNING != 'true'
+        run: npm run dist:mac -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload .dmg as a downloadable artifact
         uses: actions/upload-artifact@v4
